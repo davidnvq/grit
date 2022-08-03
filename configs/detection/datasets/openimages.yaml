@@ -1,0 +1,7 @@
+openimages:
+  root: ${oc.env:DATA_ROOT}/openimages/train
+  second_root: ${oc.env:HOME}/datasets/openimages/train
+  lmdb_file: ${oc.env:HOME}/datasets/openimages/annotations/train_ann_lmdb
+  ann_file: ${oc.env:HOME}/datasets/openimages/annotations/train_objects.json
+  label2ind_file: ${oc.env:HOME}/datasets/openimages/annotations/oi_vgoiv6_class2ind.json
+  num_copies: 1

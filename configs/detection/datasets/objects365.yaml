@@ -1,0 +1,7 @@
+objects365:
+  root: ${oc.env:DATA_ROOT}/objects365/train
+  second_root: ${oc.env:HOME}/datasets/objects365/train
+  lmdb_file: ${oc.env:HOME}/datasets/objects365/annotations/train_ann_lmdb
+  ann_file: ${oc.env:HOME}/datasets/objects365/annotations/zhiyuan_objv2_train.json
+  label2ind_file: ${oc.env:HOME}/datasets/objects365/annotations/object365_vgoiv6_class2ind.json
+  num_copies: 1

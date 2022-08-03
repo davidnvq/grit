@@ -1,0 +1,87 @@
+exp:
+  seed: 42
+  name: eval
+  rank: 0
+  ngpus_per_node: 2
+  world_size: 2
+  checkpoint: /home/quang/checkpoints/grit/checkpoint_caption_best_4ds.pth
+  eval: False
+  resume: False
+
+defaults:
+  - _self_
+  - decoder@model.decoder: parallel # parallel, sequential, concat
+
+dataset:
+  overfit: False
+  ann_root: '${oc.env:DATA_ROOT}/annotations'
+  img_root: '${oc.env:DATA_ROOT}'
+  hdf5_path: '${oc.env:DATA_ROOT}/all_splits.h5'
+  vocab_path: '${oc.env:DATA_ROOT}/annotations/vocab.json'
+  use_vis_feat: ${model.use_vis_feat}
+  use_det_feat: ${model.use_det_feat}
+
+  transform_cfg:
+    size: [384, 640] # (h, w)
+    resize_name: maxwh # normal, minmax, maxwh
+    randaug: False
+
+model:
+  use_gri_feat: True
+  use_reg_feat: True
+  grid_feat_dim: 1024
+  frozen_stages: 2
+  beam_size: 5
+  beam_len: 20
+  dropout: 0.2
+  attn_dropout: 0.2
+
+  vocab_size: 10201
+  max_len: 54
+  pad_idx: 1
+  bos_idx: 2
+  eos_idx: 3
+  d_model: 512
+  n_heads: 8
+
+  encoder:
+    n_memories: 1
+    n_layers: 3
+
+  detector: 
+    checkpoint: '' 
+    d_model: 512
+    dim_feedforward: 1024
+    num_heads: 8
+    num_layers: 6
+    num_levels: 4
+    num_points: 4
+    num_queries: 150
+    num_classes: 1849
+    dropout: 0.1
+    activation: 'relu'
+    return_intermediate: True
+    with_box_refine: True
+
+
+optimizer:
+  min_lr: 1e-4
+  xe_lr: 5e-4
+  sc_lr: 5e-6
+  xe_backbone_lr: 1e-5
+  sc_backbone_lr: 5e-6
+  batch_size: 16
+  num_workers: 2
+  freezing_xe_epochs: 0
+  finetune_xe_epochs: 0
+  finetune_sc_epochs: 0
+
+hydra:
+  run:
+    dir: ${oc.env:HOME}/checkpoints/ecaptioner/${exp.name}
+  output_subdir: ./ # directory for saving the yaml configs
+  job:
+    config:
+      override_dirname:
+        exclude_keys:
+          - exp.name

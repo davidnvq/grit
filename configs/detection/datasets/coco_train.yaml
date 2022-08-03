@@ -1,0 +1,11 @@
+coco_train:
+  root: ${oc.env:DATA_ROOT}/coco/train2017
+  lmdb_file: ${oc.env:DATA_ROOT}/coco/annotations/train_ann_lmdb
+  second_root: ${oc.env:HOME}/datasets/coco/train2017
+  ann_file: ${oc.env:HOME}/datasets/coco/annotations/instances_train2017.json
+  karpathy_val_files: 
+    - ${oc.env:HOME}/datasets/coco/annotations/karpathy_val_images.txt
+    - ${oc.env:HOME}/datasets/coco/annotations/karpathy_test_images.txt
+
+  label2ind_file: ${oc.env:HOME}/datasets/coco/annotations/coco_vgoiv6_class2ind.json
+  num_copies: 1

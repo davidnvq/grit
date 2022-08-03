@@ -1,0 +1,87 @@
+exp:
+  seed: 42
+  save_dir: ???
+  rank: 0
+  ngpus_per_node: 8
+  world_size: 64
+  checkpoint: ""
+  eval: False
+  resume: False
+  eval_every_iters: -1
+
+# https://hydra.cc/docs/patterns/select_multiple_configs_from_config_group
+defaults:
+  - _self_
+  - od_dataset@dataset: [vg_train] # coco_train, objects365, openimages]
+  - od_dataset@dataset_val: [coco_val, vg_val, vg_test]
+
+
+dataset:
+  phase: finetune
+  overfit: False
+
+dataset_val:
+  overfit: False
+
+model:
+  has_attr_head: False
+
+  backbone: 
+    backbone_name: 'swin_base_win7_384_22k' # ['swin_small', 'swin_base_win7_384_22k']
+    pre_trained: 'imagenet'
+
+  det_module:
+    reduced_dim: 512
+    dim_feedforward: 1024
+    num_heads: 8
+    num_layers: 6
+    num_levels: 4
+    num_points: 4
+    return_intermediate: True
+    num_queries: 150
+    num_classes: 1849
+    dropout: 0.1
+    activation: 'relu'
+    with_box_refine: True
+    aux_loss: True
+
+    loss:
+      dice_loss_coef: 1.
+      cls_loss_coef: 2.
+      bbox_loss_coef: 5.
+      giou_loss_coef: 2.
+      attr_loss_coef: 0.
+      eos_coef: 0.1
+      focal_alpha: 0.25
+
+    matcher: 
+      set_cost_class: 2.0
+      set_cost_bbox: 5.0
+      set_cost_giou: 2.0
+
+
+optimizer:
+  lr: 1e-5
+  lr_backbone: 2e-5
+  sp_names: ['attr_head'] # 'attr_head', 'query_embed'
+  sp_lr: 1e-4
+  sp_lr_drop_epochs: [5,] # epoch=[0 to num_epochs-1], at epoch=lr_drop_epochs, lr will decay by decay_rate
+  sp_scheduler: step
+  batch_size: 4
+  weight_decay: 1e-4
+  lr_drop_epochs: [40] # epoch=[0 to num_epochs-1], at epoch=lr_drop_epochs, lr will decay by decay_rate
+  scheduler: step # warmupcos
+  decay_rate: 0.1
+  clip_max_norm: 0.1
+  num_workers: 4
+  num_epochs: 50
+
+hydra:
+  run:
+    dir: ${oc.env:HOME}/checkpoints/ecaptioner/detection/${exp.save_dir} # eccv
+  output_subdir: ./ # directory for saving the yaml configs
+  job:
+    config:
+      override_dirname:
+        exclude_keys:
+          - exp.save_dir
