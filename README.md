@@ -58,7 +58,7 @@ python test.py
 
 ### Data preparation
 
-Download and extract COCO 2017 train and val images with annotations from
+Download and extract COCO 2014 for image captioning including train, val, and test images with annotations from
 [http://cocodataset.org](http://cocodataset.org/#download).
 We expect the directory structure to be the following:
 ```
