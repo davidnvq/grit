@@ -15,11 +15,11 @@ This paper proposes a Transformer neural architecture, dubbed <b>GRIT</b> (Grid-
 
 ## Model Zoo
 
-> **will be reformatted into a table**. The checkponits are currently stored temporarily on Google Drive with limited space (will be updated with better location).
+> **It will be reformatted into a table**. The checkpoints are currently stored temporarily on Google Drive with limited space. More checkpoints will be updated with better location.
 - pretrained object detector on Visual Genome: [checkpoint](https://drive.google.com/file/d/1dlzNkbs81ZSdeGCxKrRhLGKK_TBTdXjL/view?usp=sharing).
 - pretrained object detector on 4 datasets: [checkpoint](https://drive.google.com/file/d/1J2_Q3n4BHQgh0JhImd7c39wx5hEFzjzB/view?usp=sharing).
-- checkpoint for GRIT on image caption (using detector on VG): [checkpoint](https://drive.google.com/file/d/1ViqBJ_i9CVABpy48pOAC1MDHZ6e5Zj1v/view?usp=sharing).
-- checkpoint for GRIT on image caption (using detector on 4DS): [checkpoint](https://drive.google.com/file/d/1WLsMrtVFTftSJiGHg7iALNFImtefHtOT/view?usp=sharing). 
+- checkpoint for GRIT on image caption (using the detector pretrained on VG): [checkpoint](https://drive.google.com/file/d/1ViqBJ_i9CVABpy48pOAC1MDHZ6e5Zj1v/view?usp=sharing).
+- checkpoint for GRIT on image caption (using the detector pretrained on 4DS): [checkpoint](https://drive.google.com/file/d/1WLsMrtVFTftSJiGHg7iALNFImtefHtOT/view?usp=sharing). 
 
 ## Installation
 
