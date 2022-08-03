@@ -94,22 +94,22 @@ def extract_artemis_features(model, config, device, rank, overfit=False):
         L = len(dataloader) * BATCH_SIZE
         with h5py.File(path, 'w') as h:
             h.create_dataset('image_ids', data=dataset.img_ids)
-            h.create_dataset('vis_feat', (L, fh * fw, C), dtype='float32')
-            h.create_dataset('vis_mask', (L, 1, 1, fh * fw), dtype='bool')
+            h.create_dataset('gri_feat', (L, fh * fw, C), dtype='float32')
+            h.create_dataset('gri_mask', (L, 1, 1, fh * fw), dtype='bool')
 
-            if config.model.use_det_feat:
+            if config.model.use_reg_feat:
                 Q = config.model.detector.det_module.num_queries
                 D = config.model.detector.det_module.reduced_dim
-                h.create_dataset('det_feat', (L, Q, D), dtype='float32')
-                h.create_dataset('det_mask', (L, 1, 1, Q), dtype='bool')
+                h.create_dataset('reg_feat', (L, Q, D), dtype='float32')
+                h.create_dataset('reg_mask', (L, 1, 1, Q), dtype='bool')
     torch.distributed.barrier()
 
     with h5py.File(path, 'a') as h:
-        vis_features = h['vis_feat']
-        vis_masks = h['vis_mask']
-        if config.model.use_det_feat:
-            det_features = h['det_feat']
-            det_masks = h['det_mask']
+        gri_features = h['gri_feat']
+        gri_masks = h['gri_mask']
+        if config.model.use_reg_feat:
+            reg_features = h['reg_feat']
+            reg_masks = h['reg_mask']
 
         tmp_idx = 0
         tmp_ids_list = []
@@ -122,12 +122,12 @@ def extract_artemis_features(model, config, device, rank, overfit=False):
                 outputs = {k: tensor[:-1].to('cpu').numpy() for k, tensor in outputs.items()}
 
                 for idx, img_id in enumerate(img_ids):
-                    vis_features[tmp_idx] = outputs['vis_feat'][idx]
-                    vis_masks[tmp_idx] = outputs['vis_mask'][idx]
+                    gri_features[tmp_idx] = outputs['gri_feat'][idx]
+                    gri_masks[tmp_idx] = outputs['gri_mask'][idx]
 
-                    if config.model.use_det_feat:
-                        det_features[tmp_idx] = outputs['det_feat'][idx]
-                        det_masks[tmp_idx] = outputs['det_mask'][idx]
+                    if config.model.use_reg_feat:
+                        reg_features[tmp_idx] = outputs['reg_feat'][idx]
+                        reg_masks[tmp_idx] = outputs['reg_mask'][idx]
 
                     tmp_ids_list.append(img_id)
                     tmp_idx += 1
@@ -140,13 +140,13 @@ def extract_artemis_features(model, config, device, rank, overfit=False):
         with h5py.File(config.dataset.hdf5_path, 'w') as agg_file:
             L = len(dataloader) * BATCH_SIZE * num_gpus
             agg_file.create_dataset('image_ids', data=dataset.img_ids)
-            vis_features = agg_file.create_dataset('vis_feat', (L, fh * fw, C), dtype='float32')
-            vis_masks = agg_file.create_dataset('vis_mask', (L, 1, 1, fh * fw), dtype='bool')
-            if config.model.use_det_feat:
+            gri_features = agg_file.create_dataset('gri_feat', (L, fh * fw, C), dtype='float32')
+            gri_masks = agg_file.create_dataset('gri_mask', (L, 1, 1, fh * fw), dtype='bool')
+            if config.model.use_reg_feat:
                 Q = config.model.detector.det_module.num_queries
                 D = config.model.detector.det_module.reduced_dim
-                det_features = agg_file.create_dataset('det_feat', (L, Q, D), dtype='float32')
-                det_masks = agg_file.create_dataset('det_mask', (L, 1, 1, Q), dtype='bool')
+                reg_features = agg_file.create_dataset('reg_feat', (L, Q, D), dtype='float32')
+                reg_masks = agg_file.create_dataset('reg_mask', (L, 1, 1, Q), dtype='bool')
 
             for r in range(num_gpus):
                 filename = f"{r}_" + os.path.basename(config.dataset.hdf5_path)
@@ -159,13 +159,13 @@ def extract_artemis_features(model, config, device, rank, overfit=False):
                     for tmp_idx, tmp_id in enumerate(tmp_ids_list):
                         img_idx = dataset.img_id2idx[tmp_id]
                         # Add grid features
-                        vis_features[img_idx] = f['vis_feat'][tmp_idx]
-                        vis_masks[img_idx] = f['vis_mask'][tmp_idx]
+                        gri_features[img_idx] = f['gri_feat'][tmp_idx]
+                        gri_masks[img_idx] = f['gri_mask'][tmp_idx]
 
                         # Add det features
-                        if config.model.use_det_feat:
-                            det_features[img_idx] = f['det_feat'][tmp_idx]
-                            det_masks[img_idx] = f['det_mask'][tmp_idx]
+                        if config.model.use_reg_feat:
+                            reg_features[img_idx] = f['reg_feat'][tmp_idx]
+                            reg_masks[img_idx] = f['reg_mask'][tmp_idx]
 
                 os.remove(path)
                 print(f"rank: {rank} - Delete {path}")
