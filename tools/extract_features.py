@@ -45,7 +45,7 @@ class ExtractDataset(Dataset):
         return img, img_id, img_idx
 
 
-def extract_gri_features(model, config, device, rank):
+def extract_vis_features(model, config, device, rank):
     BATCH_SIZE = 64
     model = model.eval()
     print(f"Extract vis feature. Rank: {rank}")
