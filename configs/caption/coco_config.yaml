@@ -49,6 +49,7 @@ model:
     n_layers: 3
 
   detector: 
+    backbone_name: 'swin_base_win7_384_22k' # ['swin_small', 'swin_base_win7_384_22k']
     checkpoint: '' 
     d_model: 512
     dim_feedforward: 1024
