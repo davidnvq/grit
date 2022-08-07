@@ -92,7 +92,7 @@ def build_optimizers_schedulers(model, config):
 def main(gpu, config, overrides):
     # gpu: the rank of gpu in the node
     rank = config.exp.rank * config.exp.ngpus_per_node + gpu
-    proj_dir = os.path.join(os.environ['HOME'], 'workspace/ecaptioner')
+    proj_dir = os.path.join(os.environ['OUTPUT'], 'workspace/ecaptioner')
 
     if gpu == 0:
         script_path = os.path.join(proj_dir, config.exp.script)

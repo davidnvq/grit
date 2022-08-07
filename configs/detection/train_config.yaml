@@ -2,8 +2,8 @@ exp:
   seed: 42
   save_dir: ???
   rank: 0
-  ngpus_per_node: 8
-  world_size: 64
+  ngpus_per_node: 1
+  world_size: 1
   checkpoint: ""
   eval: False
   resume: False
@@ -78,8 +78,8 @@ optimizer:
 
 hydra:
   run:
-    dir: ${oc.env:HOME}/checkpoints/ecaptioner/detection/${exp.save_dir} # eccv
-  output_subdir: ./ # directory for saving the yaml configs
+    dir: ${oc.env:OUTPUT}/checkpoints/ecaptioner/detection/${exp.save_dir} # eccv
+  output_subdir: ./config # directory for saving the yaml configs
   job:
     config:
       override_dirname:

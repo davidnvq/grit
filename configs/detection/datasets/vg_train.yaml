@@ -1,9 +1,9 @@
 vg_train:
   root: ${oc.env:DATA_ROOT}/vg/images
-  second_root: ${oc.env:HOME}/datasets/vg/images
+  second_root: ${oc.env:OUTPUT}/datasets/vg/images
   lmdb_file: ${oc.env:DATA_ROOT}/vg/annotations/train_ann_lmdb
-  ann_file: ${oc.env:HOME}/datasets/vg/annotations/train_objects.json
-  label2ind_file: ${oc.env:HOME}/datasets/vg/annotations/vgcocooiobjects_v1_class2ind.json
-  attribute2ind_file: ${oc.env:HOME}/datasets/vg/annotations/attribute2ind.json
-  oid2attr_file: ${oc.env:HOME}/datasets/vg/annotations/oid2attr.json
+  ann_file: ${oc.env:OUTPUT}/datasets/vg/annotations/train_objects.json
+  label2ind_file: ${oc.env:OUTPUT}/datasets/vg/annotations/vgcocooiobjects_v1_class2ind.json
+  attribute2ind_file: ${oc.env:OUTPUT}/datasets/vg/annotations/attribute2ind.json
+  oid2attr_file: ${oc.env:OUTPUT}/datasets/vg/annotations/oid2attr.json
   num_copies: 1

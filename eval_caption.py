@@ -95,14 +95,14 @@ def main(gpu, config):
     )
 
 
-@hydra.main(config_path="configs/caption", config_name="coco_config")
+@hydra.main(config_path="configs/caption", config_name="coco_config", version_base='1.2')
 def run_main(config: DictConfig) -> None:
     mp.spawn(main, nprocs=1, args=(config,))
 
 
 if __name__ == "__main__":
-    if os.environ["USER"] == 'quang':
-        os.environ["DATA_ROOT"] = "/home/quang/datasets/coco_caption"
+
+    os.environ["DATA_ROOT"] = "/media/localhost/F/deeplearning/datasets/multi-modal/GRIT/coco_caption"
 
     os.environ["MASTER_ADDR"] = "localhost"
     os.environ["MASTER_PORT"] = "6688"

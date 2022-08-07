@@ -1,9 +1,11 @@
+split: valid
+
 exp:
   seed: 42
-  name: eval
+  name: eval # caption_4ds
   rank: 0
-  ngpus_per_node: 8
-  world_size: 8
+  ngpus_per_node: 1
+  world_size: 1
   checkpoint: ''
   eval: False
   resume: False
@@ -48,8 +50,9 @@ model:
     n_memories: 1
     n_layers: 3
 
-  detector: 
-    checkpoint: '' 
+  detector:
+    backbone_name: swin_base_win7_384_22k
+    checkpoint: '/media/localhost/F/deeplearning/modelzoo/multi-modal/vision-language/GRIT/detector_checkpoint_4ds.pth'
     d_model: 512
     dim_feedforward: 1024
     num_heads: 8
@@ -74,7 +77,7 @@ optimizer:
   weight_decay: 0.01
   beta_1: 0.9
   beta_2: 0.99
-  batch_size: 16
+  batch_size: 4
   num_workers: 2
   freezing_xe_epochs: 0
   freezing_sc_epochs: 0
@@ -83,8 +86,8 @@ optimizer:
 
 hydra:
   run:
-    dir: ${oc.env:HOME}/checkpoints/grit/coco/${exp.name}
-  output_subdir: ./ # directory for saving the yaml configs
+    dir: ${oc.env:OUTPUT}/checkpoints/grit/coco/${exp.name}
+  output_subdir: ./config # directory for saving the yaml configs
   job:
     config:
       override_dirname:

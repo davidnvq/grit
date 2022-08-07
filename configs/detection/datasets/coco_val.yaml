@@ -1,6 +1,6 @@
 coco_val:
     root: ${oc.env:DATA_ROOT}/coco/val2017
-    second_root: ${oc.env:HOME}/datasets/coco/val2017
-    ann_file: ${oc.env:HOME}/datasets/coco/annotations/anno_1848_val2017.json
-    label2ind_file: ${oc.env:HOME}/datasets/coco/annotations/coco_vgoiv6_class2ind.json
+    second_root: ${oc.env:OUTPUT}/datasets/coco/val2017
+    ann_file: ${oc.env:OUTPUT}/datasets/coco/annotations/anno_1848_val2017.json
+    label2ind_file: ${oc.env:OUTPUT}/datasets/coco/annotations/coco_vgoiv6_class2ind.json
     num_copies: 1

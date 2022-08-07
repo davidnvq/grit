@@ -715,7 +715,7 @@ def swin_nano(pretrained=None, pos_dim=384, **kwargs):
     if pretrained is not None:
         if pretrained == 'imagenet':
             path = 'pretrained_weights/swin_nano_patch4_window7_224.pth'
-            path = os.path.join(os.environ['HOME'], 'checkpoints/eccv', path)
+            path = os.path.join(os.environ['OUTPUT'], 'checkpoints/eccv', path)
             if not os.path.exists(path):
                 torch.hub._download_url_to_file(
                     url="https://github.com/naver-ai/vidt/releases/download/v0.1-swin/swin_nano_patch4_window7_224.pth",
@@ -749,7 +749,7 @@ def swin_tiny(pretrained=None, pos_dim=768, **kwargs):
     if pretrained is not None:
         if pretrained == 'imagenet':
             path = 'pretrained_weights/swin_tiny_patch4_window7_224.pth'
-            path = os.path.join(os.environ['HOME'], 'checkpoints/eccv', path)
+            path = os.path.join(os.environ['OUTPUT'], 'checkpoints/eccv', path)
             if not os.path.exists(path):
                 torch.hub._download_url_to_file(
                     url=
@@ -783,7 +783,7 @@ def swin_small(pretrained=None, pos_dim=768, **kwargs):
         if pretrained == 'imagenet':
 
             path = "pretrained_weights/swin_small_patch4_window7_224.pth"
-            path = os.path.join(os.environ['HOME'], 'checkpoints/eccv', path)
+            path = os.path.join(os.environ['OUTPUT'], 'checkpoints/eccv', path)
             if not os.path.exists(path):
                 torch.hub._download_url_to_file(
                     url=
@@ -816,7 +816,7 @@ def swin_base_win7_224(pretrained=None, pos_dim=1024, **kwargs):
     if pretrained is not None:
         if pretrained == 'imagenet':
             path = "pretrained_weights/swin_base_patch4_window7_224_22k.pth"
-            path = os.path.join(os.environ['HOME'], 'checkpoints/eccv', path)
+            path = os.path.join(os.environ['OUTPUT'], 'checkpoints/eccv', path)
             if not os.path.exists(path):
                 torch.hub._download_url_to_file(
                     url=
@@ -849,7 +849,7 @@ def swin_large_win7_224(pretrained=None, pos_dim=1024, **kwargs):
     if pretrained is not None:
         if pretrained == 'imagenet':
             path = "pretrained_weights/swin_large_patch4_window7_224_22k.pth"
-            path = os.path.join(os.environ['HOME'], 'checkpoints/eccv', path)
+            path = os.path.join(os.environ['OUTPUT'], 'checkpoints/eccv', path)
             torch.hub._download_url_to_file(
                 url=
                 "https://github.com/SwinTransformer/storage/releases/download/v1.0.0/swin_large_patch4_window7_224_22k.pth",
@@ -881,7 +881,7 @@ def swin_base_win7_384(pretrained=None, pos_dim=1024, **kwargs):
     if pretrained is not None:
         if pretrained == 'imagenet':
             path = "pretrained_weights/swin_base_patch4_window7_384_22k.pth"
-            path = os.path.join(os.environ['HOME'], 'checkpoints/eccv', path)
+            path = os.path.join(os.environ['OUTPUT'], 'checkpoints/eccv', path)
             if not os.path.exists(path):
                 torch.hub._download_url_to_file(
                     url=
@@ -914,7 +914,7 @@ def swin_large_win7_384(pretrained=None, pos_dim=1024, **kwargs):
     if pretrained is not None:
         if pretrained == 'imagenet':
             path = "pretrained_weights/swin_large_patch4_window7_384_22k.pth"
-            path = os.path.join(os.environ['HOME'], 'checkpoints/eccv', path)
+            path = os.path.join(os.environ['OUTPUT'], 'checkpoints/eccv', path)
             if not os.path.exists(path):
                 torch.hub._download_url_to_file(
                     url=

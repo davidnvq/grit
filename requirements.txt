@@ -8,3 +8,4 @@ einops
 hydra-core
 spacy
 timm
+lmdb

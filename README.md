@@ -94,19 +94,19 @@ The evaluation will be run on a single GPU.
 ```shell
 export DATA_ROOT=path/to/coco_caption
 # evaluate on the validation split
-python eval_caption.py +split='valid' exp.checkpoint=path_to_caption_checkpoint
+python eval_caption.py split='valid' exp.checkpoint=path_to_caption_checkpoint
 
 # evaluate on the test split
-python eval_caption.py +split='test' exp.checkpoint=path_to_caption_checkpoint
+python eval_caption.py split='test' exp.checkpoint=path_to_caption_checkpoint
 ```
 * Evaluation on the **online splits**:
 ```shell
 export DATA_ROOT=path/to/coco_caption
 # evaluate on the validation split
-python eval_caption_online.py +split='valid' exp.checkpoint=path_to_caption_checkpoint
+python eval_caption_online.py split='valid' exp.checkpoint=path_to_caption_checkpoint
 
 # evaluate on the test split
-python eval_caption_online.py +split='test' exp.checkpoint=path_to_caption_checkpoint
+python eval_caption_online.py split='test' exp.checkpoint=path_to_caption_checkpoint
 ```
 
 
