@@ -116,7 +116,7 @@ def log_epoch(config, writer, epoch, train_res, split, scores, which='ft_xe'):
 
     with open('result.csv', 'a') as f:
         text = f'{config.exp.name.split("/")[-1]}, '
-        backbone = 'S-' if config.model.detector.backbone_name == 'swin_small' else 'B-'
+        backbone = 'B-'
         backbone += 'VG' if os.path.exists(config.model.detector.checkpoint) else 'IM'
         text += f'{backbone}, '
         text += f'{config.dataset.transform_cfg.size[0]}_{config.dataset.transform_cfg.size[1]}, '

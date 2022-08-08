@@ -10,7 +10,7 @@ exp:
 
 defaults:
   - _self_
-  - decoder@model.decoder: parallel # parallel, sequential, concat
+  - cap_generator@model.cap_generator: parallel # parallel, sequential, concat
 
 dataset:
   overfit: False
@@ -44,7 +44,7 @@ model:
   d_model: 512
   n_heads: 8
 
-  encoder:
+  grit_net:
     n_memories: 1
     n_layers: 3
 

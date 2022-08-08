@@ -213,7 +213,7 @@ class Transformer(BaseCaptioner):
             # When decoding, we will remove all predictions after <EOS>
 
         selected_idx, selected_logprob = self.select(timestep, candidate_logprob, beam_size, **kwargs)
-        selected_beam = selected_idx // candidate_logprob.shape[-1]  # [B Beam]
+        selected_beam = torch.div(selected_idx, candidate_logprob.shape[-1],  rounding_mode='floor')  # [B Beam]
         selected_words = selected_idx - selected_beam * candidate_logprob.shape[-1]  # [B Beam]
 
         # save the states of the selected beam
