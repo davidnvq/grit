@@ -191,7 +191,7 @@ def main(gpu, config):
             )
             samplers['train_dict'].set_epoch(epoch)
 
-        if rank == 1:
+        if rank == 0:
             best_cider_val = evaluate_metrics(
                 model,
                 optimizers,
@@ -207,7 +207,7 @@ def main(gpu, config):
                 scheduler=scheduler,
             )
 
-        if rank == 0:
+        if rank == 1:
             best_cider_test = evaluate_metrics(
                 model,
                 optimizers,
@@ -255,7 +255,7 @@ def run_main(config: DictConfig) -> None:
 
 
 if __name__ == "__main__":
-    os.environ["DATA_ROOT"] = "/home/quang/datasets/coco_caption"
+    # os.environ["DATA_ROOT"] = "/home/quang/datasets/coco_caption"
     os.environ["MASTER_ADDR"] = "localhost"
     os.environ["MASTER_PORT"] = "6688"
     run_main()
