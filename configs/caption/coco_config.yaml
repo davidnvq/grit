@@ -1,5 +1,3 @@
-split: valid
-
 exp:
   seed: 42
   name: eval # caption_4ds
