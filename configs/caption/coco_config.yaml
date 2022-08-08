@@ -13,7 +13,7 @@ defaults:
   - decoder@model.decoder: parallel # parallel, sequential, concat
 
 dataset:
-  overfit: True
+  overfit: False
   ann_root: '${oc.env:DATA_ROOT}/annotations'
   img_root: '${oc.env:DATA_ROOT}'
   hdf5_path: '${oc.env:DATA_ROOT}/all_splits.h5' # this is used for freezed extractor; fast to train.
