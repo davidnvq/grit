@@ -36,26 +36,26 @@ def main(gpu, config):
 
     detector = DDP(detector, device_ids=[gpu])
 
-    encoder = GridFeatureNetwork(
+    grit_net = GridFeatureNetwork(
         pad_idx=config.model.pad_idx,
         d_in=config.model.grid_feat_dim,
         dropout=config.model.dropout,
         attn_dropout=config.model.attn_dropout,
         attention_module=MemoryAttention,
-        **config.model.encoder,
+        **config.model.grit_net,
     )
-    decoder = CaptionGenerator(
+    cap_generator = CaptionGenerator(
         vocab_size=config.model.vocab_size,
         max_len=config.model.max_len,
         pad_idx=config.model.pad_idx,
-        cfg=config.model.decoder,
+        cfg=config.model.cap_generator,
         dropout=config.model.dropout,
         attn_dropout=config.model.attn_dropout,
-        **config.model.decoder,
+        **config.model.cap_generator,
     )
     model = Transformer(
-        encoder,
-        decoder,
+        grit_net,
+        cap_generator,
         detector=detector.module,
         use_gri_feat=config.model.use_gri_feat,
         use_reg_feat=config.model.use_reg_feat,
@@ -94,8 +94,7 @@ def run_main(config: DictConfig) -> None:
 
 
 if __name__ == "__main__":
-    if os.environ["USER"] == 'quang':
-        os.environ["DATA_ROOT"] = "/home/quang/datasets/coco_caption"
+    # os.environ["DATA_ROOT"] = "/home/quang/datasets/coco_caption"
     os.environ["MASTER_ADDR"] = "localhost"
     os.environ["MASTER_PORT"] = "6688"
     run_main()
