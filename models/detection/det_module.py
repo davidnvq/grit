@@ -22,8 +22,7 @@ from timm.models.layers import DropPath
 
 
 class MLP(nn.Module):
-    """ Very simple multi-layer perceptron (also called FFN)"""
-
+    
     def __init__(self, input_dim, hidden_dim, output_dim, num_layers):
         super().__init__()
         self.num_layers = num_layers
@@ -37,27 +36,6 @@ class MLP(nn.Module):
 
 
 class DetectionModule(nn.Module):
-    """ A Deformable Transformer for the neck in a detector
-
-    Parameters:
-        d_model: the channel dimension for attention [default=256]
-        nhead: the number of heads [default=8]
-        num_decoder_layers: the number of decoding layers [default=6]
-        dim_feedforward: the channel dim of point-wise FFNs [default=1024]
-        dropout: the degree of dropout used in FFNs [default=0.1]
-        activation: An activation function to use [default='relu']
-        return_intermediate_dec: whether to return all the indermediate outputs [default=True]
-        num_feature_levels: the number of scales for extracted features [default=4]
-        dec_n_points: the number of reference points for deformable attention [default=4]
-        drop_path: the ratio of stochastic depth for decoding layers [default=0.0]
-        
-        num_classes: number of object classes
-        num_queries: number of object queries (i.e., det tokens). This is the maximal number of objects
-                        DETR can detect in a single image. For COCO, we recommend 100 queries.
-        aux_loss: True if auxiliary decoding losses (loss at each decoder layer) are to be used.
-        with_box_refine: iterative bounding box refinement
-
-    """
 
     def bbox_refine(self, bbox_embed, output, reference_points):
         # hack implementation for iterative bounding box refinement
@@ -92,7 +70,6 @@ class DetectionModule(nn.Module):
         num_queries=100,
     ):
         super().__init__()
-        # two essential techniques used [default use]
         self.aux_loss = aux_loss
         self.with_box_refine = with_box_refine
 
@@ -126,8 +103,6 @@ class DetectionModule(nn.Module):
         self.class_embed.bias.data = torch.ones(num_classes) * bias_value
         nn.init.constant_(self.bbox_embed.layers[-1].weight.data, 0)
         nn.init.constant_(self.bbox_embed.layers[-1].bias.data, 0)
-
-        # the prediction is made for each decoding layers + the standalone detector (Swin with RAM)
         num_pred = num_decoder_layers + 1
 
         # set up all required nn.Module for additional techniques
@@ -204,20 +179,6 @@ class DetectionModule(nn.Module):
         }
 
     def forward(self, srcs, masks):
-        """ The forward step of the decoder
-
-        Parameters:
-            srcs: [Patch] tokens
-            masks: input padding mask
-            query_embed: [DET] tokens - [B, num_queries, C*2] (tgt, pos)
-
-        Returns:
-            hs: calibrated [DET] tokens
-            init_reference_out: init reference points
-            inter_references_out: intermediate reference points for box refinement
-            enc_token_class_unflat: info. for token labeling
-        """
-
         od_inputs = self.prepare_od_inputs(srcs, masks)
         init_reference_out = od_inputs['reference_points']
 
@@ -253,10 +214,6 @@ class DetectionModule(nn.Module):
 
     @torch.jit.unused
     def _set_aux_loss(self, outputs_class, outputs_coord):
-        # this is a workaround to make torchscript happy, as torchscript
-        # doesn't support dictionary with non-homogeneous values, such
-        # as a dict having both a Tensor and a list.
-
         return [{'pred_logits': a, 'pred_boxes': b} for a, b in zip(outputs_class[:-1], outputs_coord[:-1])]
 
     def detection_head(self, hs, init_reference, inter_references):
@@ -315,19 +272,6 @@ class DetectionModule(nn.Module):
 
 
 class DeformableTransformerDecoderLayer(nn.Module):
-    """ A decoder layer.
-
-    Parameters:
-        d_model: the channel dimension for attention [default=256]
-        d_ffn: the channel dim of point-wise FFNs [default=1024]
-        dropout: the degree of dropout used in FFNs [default=0.1]
-        activation: An activation function to use [default='relu']
-        n_levels: the number of scales for extracted features [default=4]
-        n_heads: the number of heads [default=8]
-        n_points: the number of reference points for deformable attention [default=4]
-        drop_path: the ratio of stochastic depth for decoding layers [default=0.0]
-    """
-
     def __init__(self,
                  d_model=256,
                  d_ffn=1024,
@@ -338,18 +282,14 @@ class DeformableTransformerDecoderLayer(nn.Module):
                  n_points=4,
                  drop_path=0.):
         super().__init__()
-
-        # [DET x PATCH] deformable cross-attention
         self.cross_attn = MSDeformAttn(d_model, n_levels, n_heads, n_points)
         self.dropout1 = nn.Dropout(dropout)
         self.norm1 = nn.LayerNorm(d_model)
-
-        # [DET x DET] self-attention
+        
         self.self_attn = nn.MultiheadAttention(d_model, n_heads, dropout=dropout)
         self.dropout2 = nn.Dropout(dropout)
         self.norm2 = nn.LayerNorm(d_model)
 
-        # ffn for multi-heaed
         self.linear1 = nn.Linear(d_model, d_ffn)
         self.activation = _get_activation_fn(activation)
         self.dropout3 = nn.Dropout(dropout)
@@ -414,8 +354,6 @@ def _get_clones(module, N):
 
 
 def _get_activation_fn(activation):
-    """Return an activation function given a string"""
-
     if activation == "relu":
         return F.relu
     if activation == "gelu":
