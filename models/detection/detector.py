@@ -47,25 +47,6 @@ class Detector(nn.Module):
             nn.init.constant_(proj[0].bias, 0)
 
     def forward(self, samples: NestedTensor):
-        """ 
-        Parameters:
-            The forward expects a NestedTensor, which consists of:
-            - samples.tensor: batched images, of shape [batch_size x 3 x H x W]
-            - samples.mask: a binary mask of shape [batch_size x H x W], containing 1 on padded pixels
-
-        Returns:
-            A dictionary having the key and value pairs below:
-            - "pred_logits": the classification logits (including no-object) for all queries.
-                            Shape= [batch_size x num_queries x (num_classes + 1)]
-            - "pred_boxes": The normalized boxes coordinates for all queries, represented as
-                           (center_x, center_y, height, width). These values are normalized in [0, 1],
-                           relative to the size of each individual image (disregarding possible padding).
-                           See PostProcess for information on how to retrieve the unnormalized bounding box.
-            - "aux_outputs": Optional, only returned when auxilary losses are activated. It is a list of
-                            dictionnaries containing the two above keys for each decoder layer.
-                            If iou_aware is True, "pred_ious" is also returns as one of the key in "aux_outputs"
-        """
-
         if isinstance(samples, (list, torch.Tensor)):
             samples = nested_tensor_from_tensor_list(samples)
 
@@ -100,7 +81,6 @@ class Detector(nn.Module):
         x = samples.tensors  # RGB input # [B, 3, H, W]
         mask = samples.mask  # padding mask [B, H, W]
 
-        # return multi-scale [PATCH] tokens along with final [DET] tokens and their pos encodings
         features = self.backbone(x)
         # features = [[B, C1, H1, W1], [B, C2, H2, W2], [B, C3, H3, W3], [B, C4, H4, W4]]
         # C1 -> C3 = embed_dim*2(i) i = 1->3
