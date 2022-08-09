@@ -2,6 +2,7 @@
 # Modified from Swin Transformer
 # Copyright (c) 2021 Microsoft
 # Written by Ze Liu, Yutong Lin, Yixuan Wei
+# Reference to https://github.com/naver-ai/vidt for more Swin-backbone
 # --------------------------------------------------------
 
 from functools import partial
@@ -38,10 +39,9 @@ class Mlp(nn.Module):
 
 def masked_sin_pos_encoding(x, mask, num_pos_feats, temperature=10000, scale=2 * math.pi):
     """ Masked Sinusoidal Positional Encoding
-
-    Parameters:
-        x: [PATCH] tokens
-        mask: the padding mask for [PATCH] tokens
+    Args:
+        x: input tokens
+        mask: the padding mask for input tokens
         num_pos_feats: the size of channel dimension
         temperature: the temperature value
         scale: the normalization scale
@@ -75,7 +75,7 @@ def masked_sin_pos_encoding(x, mask, num_pos_feats, temperature=10000, scale=2 *
 
 def window_partition(x, window_size):
     """
-    Parameters:
+    Args:
         x: (B, H, W, C)
         window_size (int): window size
 
@@ -90,7 +90,7 @@ def window_partition(x, window_size):
 
 def window_reverse(windows, window_size, H, W):
     """
-    Parameters:
+    Args:
         windows: (num_windows*B, window_size, window_size, C)
         window_size (int): Window size
         H (int): Height of image
@@ -106,20 +106,20 @@ def window_reverse(windows, window_size, H, W):
 
 
 class WindowAttention(nn.Module):
-    """ Window based multi-head self attention (W-MSA) module with relative position bias.
-    It supports both of shifted and non-shifted window.
-    Args:
-        dim (int): Number of input channels.
-        window_size (tuple[int]): The height and width of the window.
-        num_heads (int): Number of attention heads.
-        qkv_bias (bool, optional):  If True, add a learnable bias to query, key, value. Default: True
-        qk_scale (float | None, optional): Override default qk scale of head_dim ** -0.5 if set
-        attn_drop (float, optional): Dropout ratio of attention weight. Default: 0.0
-        proj_drop (float, optional): Dropout ratio of output. Default: 0.0
-    """
+
 
     def __init__(self, dim, window_size, num_heads, qkv_bias=True, qk_scale=None, attn_drop=0., proj_drop=0.):
-
+        """ 
+        It supports both of shifted and non-shifted window.
+        Args:
+            dim (int): Number of input channels.
+            window_size (tuple[int]): The height and width of the window.
+            num_heads (int): Number of attention heads.
+            qkv_bias (bool, optional):  If True, add a learnable bias to query, key, value. Default: True
+            qk_scale (float | None, optional): Override default qk scale of head_dim ** -0.5 if set
+            attn_drop (float, optional): Dropout ratio of attention weight. Default: 0.0
+            proj_drop (float, optional): Dropout ratio of output. Default: 0.0
+        """
         super().__init__()
         self.dim = dim
         self.window_size = window_size  # Wh, Ww
@@ -153,7 +153,7 @@ class WindowAttention(nn.Module):
         self.softmax = nn.Softmax(dim=-1)
 
     def forward(self, x, mask=None):
-        """ Forward function.
+        """
         Args:
             x: input features with shape of (num_windows*B, N, C)
             mask: (0/-inf) mask with shape of (num_windows, Wh*Ww, Wh*Ww) or None
@@ -187,21 +187,6 @@ class WindowAttention(nn.Module):
 
 
 class SwinTransformerBlock(nn.Module):
-    """ Swin Transformer Block.
-    Args:
-        dim (int): Number of input channels.
-        num_heads (int): Number of attention heads.
-        window_size (int): Window size.
-        shift_size (int): Shift size for SW-MSA.
-        mlp_ratio (float): Ratio of mlp hidden dim to embedding dim.
-        qkv_bias (bool, optional): If True, add a learnable bias to query, key, value. Default: True
-        qk_scale (float | None, optional): Override default qk scale of head_dim ** -0.5 if set.
-        drop (float, optional): Dropout rate. Default: 0.0
-        attn_drop (float, optional): Attention dropout rate. Default: 0.0
-        drop_path (float, optional): Stochastic depth rate. Default: 0.0
-        act_layer (nn.Module, optional): Activation layer. Default: nn.GELU
-        norm_layer (nn.Module, optional): Normalization layer.  Default: nn.LayerNorm
-    """
 
     def __init__(self,
                  dim,
@@ -216,6 +201,21 @@ class SwinTransformerBlock(nn.Module):
                  drop_path=0.,
                  act_layer=nn.GELU,
                  norm_layer=nn.LayerNorm):
+        """
+        Args:
+            dim (int): Number of input channels.
+            num_heads (int): Number of attention heads.
+            window_size (int): Window size.
+            shift_size (int): Shift size for SW-MSA.
+            mlp_ratio (float): Ratio of mlp hidden dim to embedding dim.
+            qkv_bias (bool, optional): If True, add a learnable bias to query, key, value.
+            qk_scale (float | None, optional): Override default qk scale of head_dim ** -0.5 if set.
+            drop (float, optional): Dropout rate. Default: 0.0
+            attn_drop (float, optional): Attention dropout rate. Default: 0.0
+            drop_path (float, optional): Stochastic depth rate. Default: 0.0
+            act_layer (nn.Module, optional): Activation layer. Default: nn.GELU
+            norm_layer (nn.Module, optional): Normalization layer.  Default: nn.LayerNorm
+        """
         super().__init__()
         self.dim = dim
         self.num_heads = num_heads
@@ -242,7 +242,7 @@ class SwinTransformerBlock(nn.Module):
         self.W = None
 
     def forward(self, x, mask_matrix):
-        """ Forward function.
+        """
         Args:
             x: Input feature, tensor size (B, H*W, C).
             H, W: Spatial resolution of the input feature.
@@ -301,14 +301,13 @@ class SwinTransformerBlock(nn.Module):
 
 
 class PatchMerging(nn.Module):
-    """ Patch Merging Layer
-
-    Parameters:
-        dim (int): Number of input channels.
-        norm_layer (nn.Module, optional): Normalization layer.  Default: nn.LayerNorm
-    """
-
+    
     def __init__(self, dim, norm_layer=nn.LayerNorm, expand=True, pos_dim=768):
+        """
+        Args:
+            dim (int): Number of input channels.
+            norm_layer (nn.Module, optional): Normalization layer.  Default: nn.LayerNorm
+        """
         super().__init__()
         self.dim = dim
 
@@ -323,14 +322,10 @@ class PatchMerging(nn.Module):
         self.norm2 = norm_layer(dim)
 
     def forward(self, x, H, W):
-        """ Forward function.
-
-        Parameters:
-            x: Input feature, tensor size (B, H*W, C), i.e., binded [PATCH, DET] tokens
+        """
+        Args:
+            x: Input feature of size (B, H*W, C)
             H, W: Spatial resolution of the input feature.
-
-        Returns:
-            x
         """
 
         B, L, C = x.shape
@@ -355,23 +350,6 @@ class PatchMerging(nn.Module):
 
 
 class BasicLayer(nn.Module):
-    """ A basic Swin Transformer layer for one stage.
-
-    Parameters:
-        dim (int): Number of feature channels
-        depth (int): Depths of this stage.
-        num_heads (int): Number of attention head.
-        window_size (int): Local window size. Default: 7.
-        mlp_ratio (float): Ratio of mlp hidden dim to embedding dim. Default: 4.
-        qkv_bias (bool, optional): If True, add a learnable bias to query, key, value. Default: True
-        qk_scale (float | None, optional): Override default qk scale of head_dim ** -0.5 if set.
-        drop (float, optional): Dropout rate. Default: 0.0
-        attn_drop (float, optional): Attention dropout rate. Default: 0.0
-        drop_path (float | tuple[float], optional): Stochastic depth rate. Default: 0.0
-        norm_layer (nn.Module, optional): Normalization layer. Default: nn.LayerNorm
-        downsample (nn.Module | None, optional): Downsample layer at the end of the layer. Default: None
-        use_checkpoint (bool): Whether to use checkpointing to save memory. Default: False.
-    """
 
     def __init__(self,
                  dim,
@@ -388,6 +366,22 @@ class BasicLayer(nn.Module):
                  downsample=None,
                  last=False,
                  use_checkpoint=False):
+        """
+        Args:
+            dim (int): Number of feature channels
+            depth (int): Depths of this stage.
+            num_heads (int): Number of attention head.
+            window_size (int): Local window size. Default: 7.
+            mlp_ratio (float): Ratio of mlp hidden dim to embedding dim. Default: 4.
+            qkv_bias (bool, optional): If True, add a learnable bias to query, key, value. Default: True
+            qk_scale (float | None, optional): Override default qk scale of head_dim ** -0.5 if set.
+            drop (float, optional): Dropout rate. Default: 0.0
+            attn_drop (float, optional): Attention dropout rate. Default: 0.0
+            drop_path (float | tuple[float], optional): Stochastic depth rate. Default: 0.0
+            norm_layer (nn.Module, optional): Normalization layer. Default: nn.LayerNorm
+            downsample (nn.Module | None, optional): Downsample layer at the end of the layer. Default: None
+            use_checkpoint (bool): Whether to use checkpointing to save memory. Default: False.
+        """
 
         super().__init__()
         self.window_size = window_size
@@ -418,9 +412,8 @@ class BasicLayer(nn.Module):
             self.downsample = None
 
     def forward(self, x, H, W):
-        """ Forward function.
-
-        Parameters:
+        """
+        Args:
             x: Input feature, tensor size (B, H*W, C).
             H, W: Spatial resolution of the input feature.
         """
@@ -454,8 +447,7 @@ class BasicLayer(nn.Module):
             else:
                 x = blk(x, attn_mask)
 
-        # reduce the number of patch tokens, but maintaining a fixed-scale det tokens
-        # meanwhile, the channel dim increases by a factor of 2
+        # reduce the number of tokens and increase the channel dim by a factor of 2
         if self.downsample is not None:
             x_down = self.downsample(x, H, W)
             Wh, Ww = (H + 1) // 2, (W + 1) // 2
@@ -465,16 +457,15 @@ class BasicLayer(nn.Module):
 
 
 class PatchEmbed(nn.Module):
-    """ Image to Patch Embedding
-
-    Parameters:
-        patch_size (int): Patch token size. Default: 4.
-        in_chans (int): Number of input image channels. Default: 3.
-        embed_dim (int): Number of linear projection output channels. Default: 96.
-        norm_layer (nn.Module, optional): Normalization layer. Default: None
-    """
-
+    
     def __init__(self, patch_size=4, in_chans=3, embed_dim=96, norm_layer=None):
+        """
+        Args:
+            patch_size (int): Patch token size. Default: 4.
+            in_chans (int): Number of input image channels. Default: 3.
+            embed_dim (int): Number of linear projection output channels. Default: 96.
+            norm_layer (nn.Module, optional): Normalization layer. Default: None
+        """
         super().__init__()
         patch_size = to_2tuple(patch_size)
         self.patch_size = patch_size
@@ -513,7 +504,7 @@ class SwinTransformer(nn.Module):
         A PyTorch impl of : `Swin Transformer: Hierarchical Vision Transformer using Shifted Windows`  -
           https://arxiv.org/pdf/2103.14030
 
-    Parameters:
+    Args:
         pretrain_img_size (int): Input image size for training the pretrained model,
             used in absolute postion embedding. Default 224.
         patch_size (int | tuple(int)): Patch size. Default: 4.
@@ -555,7 +546,7 @@ class SwinTransformer(nn.Module):
             norm_layer=nn.LayerNorm,
             ape=False,
             patch_norm=True,
-            out_indices=[1, 2, 3],  # not used in the current version, please ignore.
+            out_indices=[1, 2, 3],
             frozen_stages=-1,
             use_checkpoint=False,
             pos_dim=768):
@@ -563,11 +554,11 @@ class SwinTransformer(nn.Module):
 
         self.pretrain_img_size = pretrain_img_size
         self.num_layers = len(depths)
-        self.embed_dim = embed_dim  # dim in the first patch_embed
+        self.embed_dim = embed_dim 
         self.ape = ape  # False
         self.patch_norm = patch_norm  # True
         self.out_indices = out_indices  # [1,2,3] <- but not used
-        self.frozen_stages = frozen_stages  # -1 Not frozen???
+        self.frozen_stages = frozen_stages  # -1
 
         # split image into non-overlapping patches
         self.patch_embed = PatchEmbed(
@@ -576,7 +567,6 @@ class SwinTransformer(nn.Module):
             embed_dim=embed_dim,
             norm_layer=norm_layer if self.patch_norm else None)  # LayerNorm
 
-        # absolute position embedding: Not used in ViDT
         if self.ape:
             pretrain_img_size = to_2tuple(pretrain_img_size)
             patch_size = to_2tuple(patch_size)
@@ -586,7 +576,7 @@ class SwinTransformer(nn.Module):
                 torch.zeros(1, embed_dim, patches_resolution[0], patches_resolution[1]))
             trunc_normal_(self.absolute_pos_embed, std=.02)
 
-        self.pos_drop = nn.Dropout(p=drop_rate)  # drop_rate=0.0 for swin_nano
+        self.pos_drop = nn.Dropout(p=drop_rate)
 
         # stochastic depth
         dpr = [x.item() for x in torch.linspace(0, drop_path_rate, sum(depths))]  # stochastic depth decay rule
@@ -647,14 +637,13 @@ class SwinTransformer(nn.Module):
                     param.requires_grad = False
 
     def forward(self, x):
-        """ Forward function.
+        """
+        Args:
+            x: input rgb images
 
-            Parameters:
-                x: input rgb images
-
-            Returns:
-                patch_outs: multi-scale [PATCH] tokens (four scales are used)
-                    these tokens are the first input of the neck decoder
+        Returns:
+            patch_outs: multi-scale [PATCH] tokens (four scales are used)
+                these tokens are the first input of the neck decoder
         """
 
         # original input shape
@@ -698,172 +687,6 @@ class SwinTransformer(nn.Module):
         return flops
 
 
-def swin_nano(pretrained=None, pos_dim=384, **kwargs):
-    pos_dim = 384 if pos_dim is None else pos_dim
-    model = SwinTransformer(pretrain_img_size=[224, 224],
-                            embed_dim=48,
-                            depths=[2, 2, 6, 2],
-                            num_heads=[3, 6, 12, 24],
-                            window_size=7,
-                            drop_path_rate=0.0,
-                            pos_dim=pos_dim,
-                            **kwargs)
-
-    if pretrained is None or pretrained == 'none':
-        return model, 384
-
-    if pretrained is not None:
-        if pretrained == 'imagenet':
-            path = 'pretrained_weights/swin_nano_patch4_window7_224.pth'
-            path = os.path.join(os.environ['HOME'], 'checkpoints/eccv', path)
-            if not os.path.exists(path):
-                torch.hub._download_url_to_file(
-                    url="https://github.com/naver-ai/vidt/releases/download/v0.1-swin/swin_nano_patch4_window7_224.pth",
-                    dst=path)
-            checkpoint = torch.load(path, map_location="cpu")
-            model.load_state_dict(checkpoint["model"], strict=False)
-            print('Load the backbone pretrained on ImageNet 1K')
-
-        else:
-            checkpoint = torch.load(pretrained, map_location="cpu")
-            model.load_state_dict(checkpoint["model"], strict=False)
-            print('Load the backbone in the given path')
-
-    return model, 384
-
-
-def swin_tiny(pretrained=None, pos_dim=768, **kwargs):
-    pos_dim = 768 if pos_dim is None else pos_dim
-    model = SwinTransformer(pretrain_img_size=[224, 224],
-                            embed_dim=96,
-                            depths=[2, 2, 6, 2],
-                            num_heads=[3, 6, 12, 24],
-                            window_size=7,
-                            drop_path_rate=0.2,
-                            pos_dim=pos_dim,
-                            **kwargs)
-
-    if pretrained is None or pretrained == 'none':
-        return model, 768
-
-    if pretrained is not None:
-        if pretrained == 'imagenet':
-            path = 'pretrained_weights/swin_tiny_patch4_window7_224.pth'
-            path = os.path.join(os.environ['HOME'], 'checkpoints/eccv', path)
-            if not os.path.exists(path):
-                torch.hub._download_url_to_file(
-                    url=
-                    "https://github.com/SwinTransformer/storage/releases/download/v1.0.0/swin_tiny_patch4_window7_224.pth",
-                    dst=path)
-            checkpoint = torch.load(path, map_location="cpu")
-            model.load_state_dict(checkpoint["model"], strict=False)
-            print('Load the backbone pretrained on ImageNet 1K')
-        else:
-            checkpoint = torch.load(pretrained, map_location="cpu")
-            model.load_state_dict(checkpoint["model"], strict=False)
-            print('Load the backbone in the given path')
-    return model, 768
-
-
-def swin_small(pretrained=None, pos_dim=768, **kwargs):
-    pos_dim = 768 if pos_dim is None else pos_dim
-    model = SwinTransformer(pretrain_img_size=[224, 224],
-                            embed_dim=96,
-                            depths=[2, 2, 18, 2],
-                            num_heads=[3, 6, 12, 24],
-                            window_size=7,
-                            drop_path_rate=0.3,
-                            pos_dim=pos_dim,
-                            **kwargs)
-
-    if pretrained is None or pretrained == 'none':
-        return model, 768
-
-    if pretrained is not None:
-        if pretrained == 'imagenet':
-
-            path = "pretrained_weights/swin_small_patch4_window7_224.pth"
-            path = os.path.join(os.environ['HOME'], 'checkpoints/eccv', path)
-            if not os.path.exists(path):
-                torch.hub._download_url_to_file(
-                    url=
-                    "https://github.com/SwinTransformer/storage/releases/download/v1.0.0/swin_small_patch4_window7_224.pth",
-                    dst=path)
-            checkpoint = torch.load(path, map_location="cpu")
-            model.load_state_dict(checkpoint["model"], strict=False)
-            print('Load the backbone pretrained on ImageNet 1K')
-        else:
-            checkpoint = torch.load(pretrained, map_location="cpu")
-            model.load_state_dict(checkpoint["model"], strict=False)
-            print('Load the backbone pretrained on ImageNet 1K')
-    return model, 768
-
-
-def swin_base_win7_224(pretrained=None, pos_dim=1024, **kwargs):
-    pos_dim = 1024 if pos_dim is None else pos_dim
-    model = SwinTransformer(pretrain_img_size=[224, 224],
-                            embed_dim=128,
-                            depths=[2, 2, 18, 2],
-                            num_heads=[4, 8, 16, 32],
-                            window_size=7,
-                            drop_path_rate=0.3,
-                            pos_dim=pos_dim,
-                            **kwargs)
-
-    if pretrained is None or pretrained == 'none':
-        return model, 1024
-
-    if pretrained is not None:
-        if pretrained == 'imagenet':
-            path = "pretrained_weights/swin_base_patch4_window7_224_22k.pth"
-            path = os.path.join(os.environ['HOME'], 'checkpoints/eccv', path)
-            if not os.path.exists(path):
-                torch.hub._download_url_to_file(
-                    url=
-                    "https://github.com/SwinTransformer/storage/releases/download/v1.0.0/swin_base_patch4_window7_224_22k.pth",
-                    dst=path)
-            checkpoint = torch.load(path, map_location="cpu")
-            model.load_state_dict(checkpoint["model"], strict=False)
-            print('Load the backbone pretrained on ImageNet 22K')
-        else:
-            checkpoint = torch.load(pretrained, map_location="cpu")
-            model.load_state_dict(checkpoint["model"], strict=False)
-            print('Load the backbone in the given path')
-    return model, 1024
-
-
-def swin_large_win7_224(pretrained=None, pos_dim=1024, **kwargs):
-    pos_dim = 1024 if pos_dim is None else pos_dim
-    model = SwinTransformer(pretrain_img_size=[224, 224],
-                            embed_dim=192,
-                            depths=[2, 2, 18, 2],
-                            num_heads=[6, 12, 24, 48],
-                            window_size=7,
-                            drop_path_rate=0.3,
-                            pos_dim=pos_dim,
-                            **kwargs)
-
-    if pretrained is None or pretrained == 'none':
-        return model, 1024
-
-    if pretrained is not None:
-        if pretrained == 'imagenet':
-            path = "pretrained_weights/swin_large_patch4_window7_224_22k.pth"
-            path = os.path.join(os.environ['HOME'], 'checkpoints/eccv', path)
-            torch.hub._download_url_to_file(
-                url=
-                "https://github.com/SwinTransformer/storage/releases/download/v1.0.0/swin_large_patch4_window7_224_22k.pth",
-                dst=path)
-            checkpoint = torch.load(path, map_location="cpu")
-            model.load_state_dict(checkpoint["model"], strict=False)
-            print('Load the backbone pretrained on ImageNet 22K')
-        else:
-            checkpoint = torch.load(pretrained, map_location="cpu")
-            model.load_state_dict(checkpoint["model"], strict=False)
-            print('Load the backbone in the given path')
-    return model, 1024
-
-
 def swin_base_win7_384(pretrained=None, pos_dim=1024, **kwargs):
     pos_dim = 1024 if pos_dim is None else pos_dim
     model = SwinTransformer(pretrain_img_size=[384, 384],
@@ -897,55 +720,10 @@ def swin_base_win7_384(pretrained=None, pos_dim=1024, **kwargs):
     return model, 1024
 
 
-def swin_large_win7_384(pretrained=None, pos_dim=1024, **kwargs):
-    pos_dim = 1024 if pos_dim is None else pos_dim
-    model = SwinTransformer(pretrain_img_size=[384, 384],
-                            embed_dim=192,
-                            depths=[2, 2, 18, 2],
-                            num_heads=[6, 12, 24, 48],
-                            window_size=7,
-                            drop_path_rate=0.3,
-                            pos_dim=pos_dim,
-                            **kwargs)
-
-    if pretrained is None or pretrained == 'none':
-        return model, 1024
-
-    if pretrained is not None:
-        if pretrained == 'imagenet':
-            path = "pretrained_weights/swin_large_patch4_window7_384_22k.pth"
-            path = os.path.join(os.environ['HOME'], 'checkpoints/eccv', path)
-            if not os.path.exists(path):
-                torch.hub._download_url_to_file(
-                    url=
-                    "https://github.com/SwinTransformer/storage/releases/download/v1.0.0/swin_large_patch4_window7_384_22k.pth",
-                    dst=path)
-            checkpoint = torch.load(path, map_location="cpu")
-            model.load_state_dict(checkpoint["model"], strict=False)
-            print('Load the backbone pretrained on ImageNet 22K')
-        else:
-            checkpoint = torch.load(pretrained, map_location="cpu")
-            model.load_state_dict(checkpoint["model"], strict=False)
-            print('Load the backbone in the given path')
-    return model, 1024
-
-
-def build_backbone(backbone_name='swin_nano', frozen_stages=2, pre_trained='imagenet', pos_dim=None):
+def build_backbone(backbone_name='swin_base_win7_384_22k', frozen_stages=2, pre_trained='imagenet', pos_dim=None):
     # config at backbone level
-    if backbone_name == 'swin_nano':
-        backbone, hidden_dim = swin_nano(pretrained=pre_trained, frozen_stages=frozen_stages, pos_dim=pos_dim)
-    elif backbone_name == 'swin_tiny':
-        backbone, hidden_dim = swin_tiny(pretrained=pre_trained, frozen_stages=frozen_stages, pos_dim=pos_dim)
-    elif backbone_name == 'swin_small':
-        backbone, hidden_dim = swin_small(pretrained=pre_trained, frozen_stages=frozen_stages, pos_dim=pos_dim)
-    elif backbone_name == 'swin_base_win7_224_22k':
-        backbone, hidden_dim = swin_base_win7_224(pretrained=pre_trained, frozen_stages=frozen_stages, pos_dim=pos_dim)
-    elif backbone_name == 'swin_large_win7_224_22k':
-        backbone, hidden_dim = swin_large_win7_224(pretrained=pre_trained, frozen_stages=frozen_stages, pos_dim=pos_dim)
-    elif backbone_name == 'swin_base_win7_384_22k':
+    if backbone_name == 'swin_base_win7_384_22k':
         backbone, hidden_dim = swin_base_win7_384(pretrained=pre_trained, frozen_stages=frozen_stages, pos_dim=pos_dim)
-    elif backbone_name == 'swin_large_win7_384_22k':
-        backbone, hidden_dim = swin_large_win7_384(pretrained=pre_trained, frozen_stages=frozen_stages, pos_dim=pos_dim)
     else:
         raise ValueError(f'backbone {backbone_name} not supported')
     return backbone
