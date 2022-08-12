@@ -109,6 +109,23 @@ python eval_caption_online.py +split='valid' exp.checkpoint=path_to_caption_chec
 python eval_caption_online.py +split='test' exp.checkpoint=path_to_caption_checkpoint
 ```
 
+### Inference on RGB Image
+
+* Perform Inference for a single image using the script `inference_caption.py`:
+```
+python inference_caption.py +img_path='notebooks/COCO_val2014_000000000772.jpg' \
++vocab_path='path_to_annotations/vocab.json' \
+exp.checkpoint='path_to_caption_checkpoint'
+```
+*  Perform Inference for a single image using the Jupyter notebook `notebooks/Inference.ipynb`
+```shell
+# Require installing Jupyter(lab)
+pip install jupyterlab
+
+cd notebooks
+# Open jupyter notebook
+jupyter lab
+```
 
 
 ## Citation

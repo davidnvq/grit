@@ -1,2 +1,3 @@
 scripts
 **/__pycache__
+models/ops/*
