@@ -54,7 +54,7 @@ def extract_vis_features(model, config, device, rank):
     sampler = DistributedSampler(dataset, shuffle=False)
     dataloader = DataLoader(dataset, sampler=sampler, collate_fn=collate_fn, batch_size=(BATCH_SIZE - 1), num_workers=2)
 
-    stage = config.model.grid_stage
+    stage = -1 # config.model.grid_stage
     C = config.model.grid_feat_dim
     L = len(dataset)
 
