@@ -37,12 +37,14 @@ class DictionaryCollator:
 
         outputs = {}
         if self.img_field.use_hdf5_feat:
+            samples = {}
             if self.img_field.use_gri_feat:
-                outputs['gri_feat'] = torch.stack([im['gri_feat'] for im in imgs]).to(self.device)
-                outputs['gri_mask'] = torch.stack([im['gri_mask'] for im in imgs]).to(self.device)
+                samples['gri_feat'] = torch.stack([im['gri_feat'] for im in imgs]).to(self.device)
+                samples['gri_mask'] = torch.stack([im['gri_mask'] for im in imgs]).to(self.device)
             if self.img_field.use_reg_feat:
-                outputs['reg_feat'] = torch.stack([im['reg_feat'] for im in imgs]).to(self.device)
-                outputs['reg_mask'] = torch.stack([im['reg_mask'] for im in imgs]).to(self.device)
+                samples['reg_feat'] = torch.stack([im['reg_feat'] for im in imgs]).to(self.device)
+                samples['reg_mask'] = torch.stack([im['reg_mask'] for im in imgs]).to(self.device)
+            outputs['samples'] = samples
         else:
             outputs['samples'] = nested_tensor_from_tensor_list(imgs).to(self.device)
 

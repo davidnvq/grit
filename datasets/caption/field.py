@@ -54,12 +54,12 @@ class ImageField:
             img_idx = self.img_id2idx[image_id]
             if self.use_gri_feat:
                 with h5py.File(self.hdf5_path, 'r') as h:
-                    outputs['vis_feat'] = torch.from_numpy(h['vis_feat'][img_idx])
-                    outputs['vis_mask'] = torch.from_numpy(h['vis_mask'][img_idx])
+                    outputs['gri_feat'] = torch.from_numpy(h['gri_feat'][img_idx])
+                    outputs['gri_mask'] = torch.from_numpy(h['gri_mask'][img_idx])
             if self.use_reg_feat:
                 with h5py.File(self.hdf5_path, 'r') as h:
-                    outputs['det_feat'] = torch.from_numpy(h['det_feat'][img_idx])
-                    outputs['det_mask'] = torch.from_numpy(h['det_mask'][img_idx])
+                    outputs['reg_feat'] = torch.from_numpy(h['reg_feat'][img_idx])
+                    outputs['reg_mask'] = torch.from_numpy(h['reg_mask'][img_idx])
             return outputs
         else:
             img = Image.open(path).convert('RGB')

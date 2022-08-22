@@ -182,10 +182,10 @@ def evaluate_metrics(
             end_it = time.time()
             times.append(end_it - start_it)
 
-            if 'samples' in batch:
+            if 'samples' in batch and not isinstance(batch['samples'], dict):
                 bs = batch['samples'].tensors.shape[0]
-            elif 'vis_feat' in batch:
-                bs = batch['vis_feat'].shape[0]
+            else:
+                bs = batch['samples']['reg_feat'].shape[0]
             if it % 100 == 0:
                 print(
                     f"Number of iterations: {counter}, batch_size={bs}, Total time per 1 batch: {sum(times)/counter:0.5f}s"

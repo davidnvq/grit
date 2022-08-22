@@ -81,8 +81,8 @@ def extract_vis_features(model, config, device, rank):
             h.create_dataset('gri_mask', (L, 1, 1, fh * fw), dtype='bool')
 
             if config.model.use_reg_feat:
-                Q = config.model.detector.det_module.num_queries
-                D = config.model.detector.det_module.reduced_dim
+                Q = config.model.detector.num_queries
+                D = config.model.detector.d_model
                 h.create_dataset('reg_feat', (L, Q, D), dtype='float32')
                 h.create_dataset('reg_mask', (L, 1, 1, Q), dtype='bool')
     torch.distributed.barrier()
@@ -118,7 +118,6 @@ def extract_vis_features(model, config, device, rank):
 
     torch.distributed.barrier()
     if rank == 0:
-
         num_gpus = dist.get_world_size()
         with h5py.File(config.dataset.hdf5_path, 'w') as agg_file:
             L = len(dataloader) * BATCH_SIZE * num_gpus
@@ -126,8 +125,8 @@ def extract_vis_features(model, config, device, rank):
             gri_features = agg_file.create_dataset('gri_feat', (L, fh * fw, C), dtype='float32')
             gri_masks = agg_file.create_dataset('gri_mask', (L, 1, 1, fh * fw), dtype='bool')
             if config.model.use_reg_feat:
-                Q = config.model.detector.det_module.num_queries
-                D = config.model.detector.det_module.reduced_dim
+                Q = config.model.detector.num_queries
+                D = config.model.detector.d_model
                 reg_features = agg_file.create_dataset('reg_feat', (L, Q, D), dtype='float32')
                 reg_masks = agg_file.create_dataset('reg_mask', (L, 1, 1, Q), dtype='bool')
 

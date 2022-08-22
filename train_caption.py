@@ -90,7 +90,7 @@ def main(gpu, config):
             if 'best_ciders' in checkpoint:
                 best_cider_val, best_cider_test = checkpoint['best_ciders']
 
-    if not config.dataset.overfit and start_epoch < config.optimizer.freezing_xe_epochs:
+    if start_epoch < config.optimizer.freezing_xe_epochs:
         if getattr(config.optimizer, 'freeze_backbone', False):
             for p, n in model.named_parameters():
                 if 'backbone' in n:
@@ -110,7 +110,7 @@ def main(gpu, config):
     writer = SummaryWriter(log_dir='tensorboard') if rank == 0 or rank == 1 else None
 
     # train with freezing xe
-    if not config.dataset.overfit and start_epoch < config.optimizer.freezing_xe_epochs \
+    if start_epoch < config.optimizer.freezing_xe_epochs \
         and not getattr(config.optimizer, 'freeze_backbone', False):
         model.module.cached_features = True
         dataloaders, samplers = build_coco_dataloaders(config, mode='freezing', device=device)
