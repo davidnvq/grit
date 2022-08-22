@@ -85,7 +85,19 @@ python train_caption.py exp.name=caption_4ds model.detector.checkpoint=4ds_detec
 # with pretrained object detector on Visual Genome
 python train_caption.py exp.name=caption_4ds model.detector.checkpoint=vg_detector_path
 ```
-* **More configurations will be added here for obtaining ablation results**.
+
+<!-- * **More configurations will be added here for obtaining ablation results**. -->
+* To freeze the backbone and detector, we can extract the region features and initial grid features first, saving it to `dataset.hdf5_path` in the config file.
+Then we can run the following script to train the model:
+```shell
+export DATA_ROOT=path/to/coco_dataset
+# with pretrained object detector on 4 datasets
+python train_caption.py exp.name=caption_4ds model.detector.checkpoint=4ds_detector_path \
+optimizer.freezing_xe_epochs=10 \
+optimizer.freezing_sc_epochs=10 \
+optimizer.finetune_xe_epochs=0 \
+optimizer.finetune_sc_epochs=0
+```
 
 ### Evaluation
 
