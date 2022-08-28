@@ -407,10 +407,15 @@ def train_sc(model,
     with tqdm(desc='Epoch %d - train' % epoch, unit='it', total=len(dataloaders['train_dict'])) as pbar:
         for it, batch in enumerate(dataloaders['train_dict']):
             if 'samples' in batch:
-                b_s = batch['samples'].tensors.shape[0]
+                if isinstance(batch['samples'], NestedTensor):
+                    b_s = batch['samples'].tensors.shape[0]
+                elif 'gri_feat' in batch['samples']:
+                    b_s = batch['samples']['gri_feat'].shape[0]
+                elif 'reg_feat' in batch['samples']:
+                    b_s = batch['samples']['reg_feat'].shape[0]
             elif 'vis_feat' in batch:
                 b_s = batch['vis_feat'].shape[0]
-
+                
             optimizers['model'].zero_grad()
             optimizers['backbone'].zero_grad()
             outs, log_probs = model(
