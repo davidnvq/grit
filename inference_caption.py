@@ -32,7 +32,7 @@ from datasets.caption.transforms import get_transform
 from engine.utils import nested_tensor_from_tensor_list
 
 
-@hydra.main(config_path="configs/caption", config_name="coco_config", version_base=None)
+@hydra.main(config_path="configs/caption", config_name="coco_config")
 def run_main(config: DictConfig) -> None:
     device = torch.device(f"cuda:0")
     detector = build_detector(config).to(device)

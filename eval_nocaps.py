@@ -39,8 +39,6 @@ def main(gpu, config):
     # extract features
     detector = build_detector(config).to(device)
 
-    detector = DDP(detector, device_ids=[gpu])
-
     grit_net = GridFeatureNetwork(
         pad_idx=config.model.pad_idx,
         d_in=config.model.grid_feat_dim,
@@ -61,7 +59,7 @@ def main(gpu, config):
     model = Transformer(
         grit_net,
         cap_generator,
-        detector=detector.module,
+        detector=detector,
         use_vis_feat=config.model.use_vis_feat,
         use_det_feat=config.model.use_det_feat,
         config=config,

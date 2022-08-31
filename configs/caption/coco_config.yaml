@@ -83,7 +83,7 @@ optimizer:
 
 hydra:
   run:
-    dir: ${oc.env:HOME}/checkpoints/grit/coco/${exp.name}
+    dir: outputs/${exp.name}
   output_subdir: ./ # directory for saving the yaml configs
   job:
     config:

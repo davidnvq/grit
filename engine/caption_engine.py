@@ -13,7 +13,7 @@ from tqdm import tqdm
 from datasets.caption import metrics
 from torch.nn import NLLLoss
 import torch.distributed as dist
-
+from engine.utils import NestedTensor
 
 def build_optimizers(model, config, mode='xe'):
     model = getattr(model, 'module', model)

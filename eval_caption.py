@@ -33,9 +33,6 @@ def main(gpu, config):
     # extract reg features + initial grid features
     detector = build_detector(config).to(device)
 
-    # wrap it into DDP to easily load the checkpoint
-    detector = DDP(detector, device_ids=[gpu])
-
     grit_net = GridFeatureNetwork(
         pad_idx=config.model.pad_idx,
         d_in=config.model.grid_feat_dim,
@@ -56,7 +53,7 @@ def main(gpu, config):
     model = Transformer(
         grit_net,
         cap_generator,
-        detector=detector.module,
+        detector=detector,
         use_gri_feat=config.model.use_gri_feat,
         use_reg_feat=config.model.use_reg_feat,
         config=config,
@@ -76,6 +73,8 @@ def main(gpu, config):
 
     text_field = TextField(vocab_path=config.dataset.vocab_path)
 
+    with open('test.txt', 'w') as f:
+        f.write("Testttt")
     split = config.split
     print(f"Evaluating on split: {split}")
     scores = evaluate_metrics(
@@ -95,7 +94,7 @@ def main(gpu, config):
     )
 
 
-@hydra.main(config_path="configs/caption", config_name="coco_config", version_base=None)
+@hydra.main(config_path="configs/caption", config_name="coco_config")
 def run_main(config: DictConfig) -> None:
     mp.spawn(main, nprocs=1, args=(config,))
 

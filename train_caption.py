@@ -44,7 +44,7 @@ def main(gpu, config):
         print("det missing:", len(missing))
         print("det unexpected:", len(unexpected))
 
-    detector = DDP(detector, device_ids=[gpu])
+    # detector = DDP(detector, device_ids=[gpu])
 
     grit_net = GridFeatureNetwork(
         pad_idx=config.model.pad_idx,
@@ -66,7 +66,7 @@ def main(gpu, config):
     model = Transformer(
         grit_net,
         cap_generator,
-        detector=detector.module,
+        detector=detector, # .module,
         use_gri_feat=config.model.use_gri_feat,
         use_reg_feat=config.model.use_reg_feat,
         config=config,
@@ -249,7 +249,7 @@ def main(gpu, config):
         torch.distributed.barrier()
 
 
-@hydra.main(config_path="configs/caption", config_name="coco_config", version_base=None)
+@hydra.main(config_path="configs/caption", config_name="coco_config")
 def run_main(config: DictConfig) -> None:
     mp.spawn(main, nprocs=config.exp.ngpus_per_node, args=(config,))
 
