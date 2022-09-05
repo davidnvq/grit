@@ -18,7 +18,6 @@ class Transformer(BaseCaptioner):
                  config=None):
         super(Transformer, self).__init__()
         self.bos_idx = bos_idx
-        self.detector = detector
         self.grid_net = grid_net
         self.cap_generator = cap_generator
         self.use_reg_feat = use_reg_feat
@@ -35,6 +34,7 @@ class Transformer(BaseCaptioner):
             self.register_state('reg_mask', None)
 
         self.init_weights()
+        self.detector = detector
 
     def init_weights(self):
         for p in self.parameters():
