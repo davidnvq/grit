@@ -96,7 +96,9 @@ python train_caption.py exp.name=caption_4ds model.detector.checkpoint=4ds_detec
 optimizer.freezing_xe_epochs=10 \
 optimizer.freezing_sc_epochs=10 \
 optimizer.finetune_xe_epochs=0 \
-optimizer.finetune_sc_epochs=0
+optimizer.finetune_sc_epochs=0 \
+optimizer.freeze_backbone=True \
+optimizer.freeze_detector=True
 ```
 
 ### Evaluation
