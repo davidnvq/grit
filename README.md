@@ -88,6 +88,9 @@ python train_caption.py exp.name=caption_4ds model.detector.checkpoint=vg_detect
 
 <!-- * **More configurations will be added here for obtaining ablation results**. -->
 * To freeze the backbone and detector, we can extract the region features and initial grid features first, saving it to `dataset.hdf5_path` in the config file.
+
+**Noted that: this additional strategy will only achieve about 134 CIDEr (as reported by some researchers). To obtain 139.2 CIDEr, please train the model with freezed backbone/detector (in Pytorch, using `if 'backbone'/'detector' in n: p.requires_grad = False`) with image augmentation at every iteration. It means that we read and process every image during training rather than loading `extracted features` from hdf5.**
+
 Then we can run the following script to train the model:
 ```shell
 export DATA_ROOT=path/to/coco_dataset
