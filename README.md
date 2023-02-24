@@ -148,11 +148,13 @@ jupyter lab
 ## Citation
 If you find this code useful, please kindly cite the paper with the following bibtex:
 ```bibtex
-@article{nguyen2022grit,
-  title={GRIT: Faster and Better Image captioning Transformer Using Dual Visual Features},
+@inproceedings{nguyen2022grit,
+  title={Grit: Faster and better image captioning transformer using dual visual features},
   author={Nguyen, Van-Quang and Suganuma, Masanori and Okatani, Takayuki},
-  journal={arXiv preprint arXiv:2207.09666},
-  year={2022}
+  booktitle={Computer Vision--ECCV 2022: 17th European Conference, Tel Aviv, Israel, October 23--27, 2022, Proceedings, Part XXXVI},
+  pages={167--184},
+  year={2022},
+  organization={Springer}
 }
 ```
 
