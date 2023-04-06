@@ -32,19 +32,16 @@ class Detector(nn.Module):
                 ) for i in range(len(backbone.num_channels))
             ])
 
-    def forward(self, samples: NestedTensor):
-        """ 
-        Parameters:
-            The forward expects a NestedTensor, which consists of:
-            - samples.tensor: batched images, of shape [batch_size x 3 x H x W]
-            - samples.mask: a binary mask of shape [batch_size x H x W], containing 1 on padded pixels
-        """
-        if isinstance(samples, (list, torch.Tensor)):
-            samples = [img for img in samples]
+    def forward(self, images: NestedTensor):
+        # - images.tensor: batched images, of shape [batch_size x 3 x H x W]
+        # - images.mask: a binary mask of shape [batch_size x H x W], containing 1 on padded pixels
+
+        if isinstance(images, (list, torch.Tensor)):
+            samples = [img for img in images]
             samples = nested_tensor_from_tensor_list(samples)
 
-        x = samples.tensors  # RGB input # [B, 3, H, W]
-        mask = samples.mask  # padding mask [B, H, W]
+        x = images.tensors  # RGB input # [B, 3, H, W]
+        mask = images.mask  # padding mask [B, H, W]
 
         # features = [[B, C1, H1, W1], [B, C2, H2, W2], [B, C3, H3, W3], [B, C4, H4, W4]]
         features = self.backbone(x)

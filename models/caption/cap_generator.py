@@ -3,8 +3,8 @@ from torch import nn
 from torch.nn import functional as F
 import numpy as np
 from einops import rearrange, repeat
-from models.common.attention import MultiHeadAttention
-from models.common.pos_embed import sinusoid_encoding_table, PositionWiseFeedForward
+from models.common.attention import MultiHeadAttention, Attention
+from models.common.pos_embed import sinusoid_encoding_table, FeedForward
 from models.caption.containers import Module, ModuleList
 
 
@@ -32,7 +32,7 @@ class GeneratorLayer(Module):
             attention_module=self_att_module,
             attention_module_kwargs=self_att_module_kwargs,
         )
-        self.pwff = PositionWiseFeedForward(d_model, d_ff, dropout)
+        self.pwff = FeedForward(d_model, d_ff, dropout)
 
 
 class ParallelAttentionLayer(GeneratorLayer):
@@ -212,7 +212,7 @@ class SequentialAttentionLayer(GeneratorLayer):
             attention_module_kwargs=enc_att_module_kwargs,
         )
 
-        self.pwff = PositionWiseFeedForward(d_model, d_ff, dropout)
+        self.pwff = FeedForward(d_model, d_ff, dropout)
 
     def forward(self, x, y1, y2, mask_pad, mask_x, mask_y1, mask_y2):
         out = self.self_att(x, x, x, mask_x) * mask_pad

@@ -12,18 +12,22 @@ from models.caption.containers import Module
 from einops import rearrange, repeat
 
 
+def init_params(module):
+    for name, param in module.named_parameters():
+        if 'weight' in name:
+            nn.init.xavier_uniform_(param)
+        elif 'bias' in name:
+            nn.init.constant_(param, 0)
+        elif 'm_' in name:  # for memory
+            nn.init.normal_(param, mean=0, std=0.01)
+
+
 class Attention(nn.Module):
     '''
     Scaled dot-product attention
     '''
 
     def __init__(self, d_model, n_heads, dropout=0.2, **kwargs):
-        '''
-        :param d_model: Output dimensionality of the model
-        :param d_k: Dimensionality of queries and keys
-        :param d_v: Dimensionality of values
-        :param h: Number of heads
-        '''
         super().__init__()
         self.fc_q = nn.Linear(d_model, d_model)
         self.fc_k = nn.Linear(d_model, d_model)
@@ -34,35 +38,16 @@ class Attention(nn.Module):
         self.d_model = d_model
         self.n_heads = n_heads
         self.d_k = d_model // n_heads
-        self.d_v = d_model // n_heads
 
-        self.init_weights()
-
-    def init_weights(self):
-        nn.init.xavier_uniform_(self.fc_q.weight)
-        nn.init.xavier_uniform_(self.fc_k.weight)
-        nn.init.xavier_uniform_(self.fc_v.weight)
-        nn.init.xavier_uniform_(self.fc_o.weight)
-        nn.init.constant_(self.fc_q.bias, 0)
-        nn.init.constant_(self.fc_k.bias, 0)
-        nn.init.constant_(self.fc_v.bias, 0)
-        nn.init.constant_(self.fc_o.bias, 0)
+        self.apply(init_params)
 
     def forward(self, q, k, v, attention_mask=None, attention_weights=None):
-        '''
-        Computes
-        :param queries: Queries (b_s, nq, d_model)
-        :param keys: Keys (b_s, nk, d_model)
-        :param values: Values (b_s, nk, d_model)
-        :param attention_mask: Mask over attention values (b_s, h, nq, nk). True indicates masking.
-        :param attention_weights: Multiplicative weights for attention values (b_s, h, nq, nk).
-        :return:
-        '''
+        # q, k, v: (b, n, d_model), mask: (b, n, n)
         q = rearrange(self.fc_q(q), 'b nq (head d) -> b head nq d', head=self.n_heads)
-        k = rearrange(self.fc_k(k), 'b nk (head d) -> b head d nk', head=self.n_heads)
+        k = rearrange(self.fc_k(k), 'b nk (head d) -> b head nk d', head=self.n_heads)
         v = rearrange(self.fc_v(v), 'b nv (head d) -> b head nv d', head=self.n_heads)
 
-        scores = torch.matmul(q, k) / np.sqrt(self.d_k)  # [b h nq nk]
+        scores = torch.matmul(q, k.transpose(-1, -2)) / np.sqrt(self.d_k)  # [b h nq nk]
         if attention_weights is not None:
             scores = scores * attention_weights
         if attention_mask is not None:
@@ -78,18 +63,9 @@ class Attention(nn.Module):
 
 
 class MemoryAttention(nn.Module):
-    '''
-    attention with memory, from Meshed-Memory Transformers paper
-    '''
 
     def __init__(self, d_model, n_heads, n_memories, dropout=0.0, **kwargs):
-        '''
-        :param d_model: Output dimensionality of the model
-        :param d_k: Dimensionality of queries and keys
-        :param d_v: Dimensionality of values
-        :param h: Number of heads
-        :param m: Number of memory slots
-        '''
+        # * adapted from Meshed-Memory Transformers; n_memories: # mem slots
         super().__init__()
         self.fc_q = nn.Linear(d_model, d_model)
         self.fc_k = nn.Linear(d_model, d_model)
@@ -104,33 +80,12 @@ class MemoryAttention(nn.Module):
         self.n_heads = n_heads
         self.n_memories = n_memories
         self.d_k = d_model // n_heads
-        self.d_v = d_model // n_heads
 
-        self.init_weights()
-
-    def init_weights(self):
-        nn.init.xavier_uniform_(self.fc_q.weight)
-        nn.init.xavier_uniform_(self.fc_k.weight)
-        nn.init.xavier_uniform_(self.fc_v.weight)
-        nn.init.xavier_uniform_(self.fc_o.weight)
-        if self.n_memories > 0:
-            nn.init.normal_(self.m_k, 0, 1 / self.d_k)
-            nn.init.normal_(self.m_v, 0, 1 / self.n_memories)
-        nn.init.constant_(self.fc_q.bias, 0)
-        nn.init.constant_(self.fc_k.bias, 0)
-        nn.init.constant_(self.fc_v.bias, 0)
-        nn.init.constant_(self.fc_o.bias, 0)
+        self.apply(init_params)
 
     def forward(self, q, k, v, attention_mask=None, attention_weights=None):
-        '''
-        Computes
-        :param queries: Queries (b_s, nq, d_model)
-        :param keys: Keys (b_s, nk, d_model)
-        :param values: Values (b_s, nk, d_model)
-        :param attention_mask: Mask over attention values (b_s, h, nq, nk). True indicates masking.
-        :param attention_weights: Multiplicative weights for attention values (b_s, h, nq, nk).
-        :return:
-        '''
+        # q, k, v: (b, n, d_model), mask: (b, n, n) - True indicates masking
+
         b_s, nq = q.shape[:2]
         nk = k.shape[1]
         if self.n_memories > 0:
@@ -169,32 +124,26 @@ class MemoryAttention(nn.Module):
 
 
 class MultiHeadAttention(Module):
-    '''
-    Multi-head attention layer with Dropout and Layer Normalization.
-    '''
 
     def __init__(
         self,
         d_model,
         n_heads,
         dropout=.1,
-        can_be_stateful=False,
-        attention_module=None,
+        can_be_stateful=False,  # for fast inference
+        attention_module=Attention,  # Attention or MemoryAttention
         attn_dropout=0.0,
         **kwargs,
     ):
         super(MultiHeadAttention, self).__init__()
-
-        if attention_module is not None:
-            self.attention = attention_module(d_model=d_model, n_heads=n_heads, dropout=attn_dropout, **kwargs)
-        else:
-            self.attention = Attention(d_model=d_model, n_heads=n_heads, dropout=attn_dropout, **kwargs)
+        attention_module = attention_module or Attention
+        self.attention = attention_module(d_model=d_model, n_heads=n_heads, dropout=attn_dropout, **kwargs)
 
         self.dropout = nn.Dropout(p=dropout)
         self.layer_norm = nn.LayerNorm(d_model)
 
         self.can_be_stateful = can_be_stateful
-        if self.can_be_stateful:
+        if self.can_be_stateful:  # store prev computed K & V for fast inference
             self.register_state('running_keys', torch.zeros((1, d_model)))
             self.register_state('running_values', torch.zeros((1, d_model)))
 

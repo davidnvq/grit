@@ -35,7 +35,3 @@ class BaseCaptioner(Module):
 
         outputs = torch.cat([o.unsqueeze(1) for o in outputs], 1)
         return outputs
-
-    # def beam_search(self, visual, max_len: int, eos_idx: int, beam_size: int, out_size=1, return_probs=False, **kwargs):
-    #     bs = BeamSearch(self, max_len, eos_idx, beam_size)
-    #     return bs.apply(visual, out_size, return_probs, **kwargs)

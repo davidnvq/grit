@@ -1,29 +1,42 @@
 import torch
 from torch import nn
-from engine.utils import NestedTensor
-from models.caption.base import BaseCaptioner
 from einops import rearrange, repeat
+from engine.utils import NestedTensor
+
+from models.common.attention import MemoryAttention
+from models.caption.base import BaseCaptioner
+from models.caption.grid_net import GridFeatureNetwork
+from models.caption.cap_generator import CaptionGenerator
 
 
 class Transformer(BaseCaptioner):
 
-    def __init__(self,
-                 grid_net,
-                 cap_generator,
-                 bos_idx=2,
-                 detector=None,
-                 use_gri_feat=True,
-                 use_reg_feat=False,
-                 cached_features=False,
-                 config=None):
+    def __init__(self, detector, config=None):
         super(Transformer, self).__init__()
-        self.bos_idx = bos_idx
-        self.grid_net = grid_net
-        self.cap_generator = cap_generator
-        self.use_reg_feat = use_reg_feat
-        self.use_gri_feat = use_gri_feat
-        self.cached_features = cached_features
+
+        self.grid_net = GridFeatureNetwork(
+            pad_idx=config.model.pad_idx,
+            d_in=config.model.grid_feat_dim,
+            dropout=config.model.dropout,
+            attn_dropout=config.model.attn_dropout,
+            attention_module=MemoryAttention,
+            **config.model.grit_net,
+        )
+        self.cap_generator = CaptionGenerator(
+            vocab_size=config.model.vocab_size,
+            max_len=config.model.max_len,
+            pad_idx=config.model.pad_idx,
+            dropout=config.model.dropout,
+            attn_dropout=config.model.attn_dropout,
+            cfg=config.model.cap_generator,
+            **config.model.cap_generator,
+        )
+
         self.config = config
+        self.bos_idx = config.model.bos_idx
+        self.use_reg_feat = config.model.use_reg_feat
+        self.use_gri_feat = config.model.use_gri_feat
+        self.cached_features = False
 
         if self.use_gri_feat:
             self.register_state('gri_feat', None)
@@ -40,39 +53,6 @@ class Transformer(BaseCaptioner):
         for p in self.parameters():
             if p.dim() > 1:
                 nn.init.xavier_uniform_(p)
-
-    def get_bs_device(self, samples):
-        if isinstance(samples, dict):
-            key = 'gri_feat' if 'gri_feat' in samples else 'reg_feat'
-            batch_size = samples[key].shape[0]
-            device = samples[key].device
-        elif isinstance(samples, NestedTensor):
-            batch_size = samples.tensors.shape[0]
-            device = samples.tensors.device
-        return batch_size, device
-
-    def init_state(self, batch_size, device):
-        return [torch.zeros((batch_size, 0), dtype=torch.long, device=device), None, None]
-
-    def select(self, t, candidate_logprob, beam_size, **kwargs):
-        candidate_logprob = rearrange(candidate_logprob, 'B Beam V -> B (Beam V)')
-        selected_logprob, selected_idx = torch.sort(candidate_logprob, -1, descending=True)
-        selected_logprob, selected_idx = selected_logprob[:, :beam_size], selected_idx[:, :beam_size]
-        return selected_idx, selected_logprob  # [B Beam]
-
-    def _expand_state(self, selected_beam, cur_beam_size, batch_size, beam_size):
-
-        def fn(tensor):
-            shape = [int(sh) for sh in tensor.shape]
-            beam = selected_beam
-            for _ in shape[1:]:
-                beam = beam.unsqueeze(-1)
-            tensor = torch.gather(tensor.view(*([batch_size, cur_beam_size] + shape[1:])), 1,
-                                  beam.expand(*([batch_size, beam_size] + shape[1:])))
-            tensor = tensor.view(*([-1] + shape[1:]))
-            return tensor
-
-        return fn
 
     def forward(self,
                 images,
@@ -192,6 +172,39 @@ class Transformer(BaseCaptioner):
 
         return self.cap_generator(it, vis_inputs)
 
+    def get_bs_device(self, samples):
+        if isinstance(samples, dict):
+            key = 'gri_feat' if 'gri_feat' in samples else 'reg_feat'
+            batch_size = samples[key].shape[0]
+            device = samples[key].device
+        elif isinstance(samples, NestedTensor):
+            batch_size = samples.tensors.shape[0]
+            device = samples.tensors.device
+        return batch_size, device
+
+    def init_state(self, batch_size, device):
+        return [torch.zeros((batch_size, 0), dtype=torch.long, device=device), None, None]
+
+    def select(self, t, candidate_logprob, beam_size, **kwargs):
+        candidate_logprob = rearrange(candidate_logprob, 'B Beam V -> B (Beam V)')
+        selected_logprob, selected_idx = torch.sort(candidate_logprob, -1, descending=True)
+        selected_logprob, selected_idx = selected_logprob[:, :beam_size], selected_idx[:, :beam_size]
+        return selected_idx, selected_logprob  # [B Beam]
+
+    def _expand_state(self, selected_beam, cur_beam_size, batch_size, beam_size):
+
+        def fn(tensor):
+            shape = [int(sh) for sh in tensor.shape]
+            beam = selected_beam
+            for _ in shape[1:]:
+                beam = beam.unsqueeze(-1)
+            tensor = torch.gather(tensor.view(*([batch_size, cur_beam_size] + shape[1:])), 1,
+                                  beam.expand(*([batch_size, beam_size] + shape[1:])))
+            tensor = tensor.view(*([-1] + shape[1:]))
+            return tensor
+
+        return fn
+
     def iter(self, timestep, samples, outputs, return_probs, batch_size, beam_size=5, eos_idx=3, **kwargs):
         cur_beam_size = 1 if timestep == 0 else beam_size
 
@@ -213,7 +226,7 @@ class Transformer(BaseCaptioner):
             # When decoding, we will remove all predictions after <EOS>
 
         selected_idx, selected_logprob = self.select(timestep, candidate_logprob, beam_size, **kwargs)
-        selected_beam = torch.div(selected_idx, candidate_logprob.shape[-1],  rounding_mode='floor')  # [B Beam]
+        selected_beam = torch.div(selected_idx, candidate_logprob.shape[-1], rounding_mode='floor')  # [B Beam]
         selected_words = selected_idx - selected_beam * candidate_logprob.shape[-1]  # [B Beam]
 
         # save the states of the selected beam

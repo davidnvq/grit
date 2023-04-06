@@ -2,7 +2,7 @@ import torch
 from torch import nn
 from torch.nn import functional as F
 from models.common.attention import MultiHeadAttention
-from models.common.pos_embed import PositionWiseFeedForward
+from models.common.pos_embed import FeedForward
 from einops import repeat
 
 
@@ -27,12 +27,12 @@ class TransformerLayer(nn.Module):
             attn_dropout=attn_dropout,
             **kwargs,
         )
-        self.pwff = PositionWiseFeedForward(d_model, d_ff, dropout)
+        self.pwff = FeedForward(d_model, d_ff, dropout)
 
     def forward(self, queries, keys, values, attention_mask=None, attention_weights=None):
-        att = self.mhatt(queries, keys, values, attention_mask, attention_weights)
-        ff = self.pwff(att)
-        return ff
+        out = self.mhatt(queries, keys, values, attention_mask, attention_weights)
+        out = self.pwff(out)
+        return out
 
 
 class GridFeatureNetwork(nn.Module):

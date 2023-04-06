@@ -31,14 +31,10 @@ def sinusoid_encoding_table(max_len, d_model, padding_idx=None):
     return out
 
 
-class PositionWiseFeedForward(nn.Module):
-    '''
-    Position-wise feed forward layer
-    '''
+class FeedForward(nn.Module):
 
-    def __init__(self, d_model=512, d_ff=2048, dropout=.1, identity_map_reordering=False):
-        super(PositionWiseFeedForward, self).__init__()
-        self.identity_map_reordering = identity_map_reordering
+    def __init__(self, d_model=512, d_ff=2048, dropout=0.1):
+        super(FeedForward, self).__init__()
         self.fc1 = nn.Linear(d_model, d_ff)
         self.fc2 = nn.Linear(d_ff, d_model)
         self.dropout = nn.Dropout(p=dropout)
@@ -46,12 +42,7 @@ class PositionWiseFeedForward(nn.Module):
         self.layer_norm = nn.LayerNorm(d_model)
 
     def forward(self, input):
-        if self.identity_map_reordering:
-            out = self.layer_norm(input)
-            out = self.fc2(self.dropout_2(F.relu(self.fc1(out))))
-            out = input + self.dropout(torch.relu(out))
-        else:
-            out = self.fc2(self.dropout_2(F.relu(self.fc1(input))))
-            out = self.dropout(out)
-            out = self.layer_norm(input + out)
+        out = self.fc2(self.dropout_2(F.relu(self.fc1(input))))
+        out = self.dropout(out)
+        out = self.layer_norm(input + out)
         return out

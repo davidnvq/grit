@@ -41,37 +41,9 @@ def main(gpu, config):
     if os.path.exists(config.model.detector.checkpoint):
         checkpoint = torch.load(config.model.detector.checkpoint, map_location='cpu')
         missing, unexpected = detector.load_state_dict(checkpoint['model'], strict=False)
-        print("det missing:", len(missing))
-        print("det unexpected:", len(unexpected))
+        print(f"det missing:{len(missing)} det unexpected:{len(unexpected)}")
 
-    # detector = DDP(detector, device_ids=[gpu])
-
-    grit_net = GridFeatureNetwork(
-        pad_idx=config.model.pad_idx,
-        d_in=config.model.grid_feat_dim,
-        dropout=config.model.dropout,
-        attn_dropout=config.model.attn_dropout,
-        attention_module=MemoryAttention,
-        **config.model.grit_net,
-    )
-    cap_generator = CaptionGenerator(
-        vocab_size=config.model.vocab_size,
-        max_len=config.model.max_len,
-        pad_idx=config.model.pad_idx,
-        dropout=config.model.dropout,
-        attn_dropout=config.model.attn_dropout,
-        cfg=config.model.cap_generator,
-        **config.model.cap_generator,
-    )
-    model = Transformer(
-        grit_net,
-        cap_generator,
-        detector=detector, # .module,
-        use_gri_feat=config.model.use_gri_feat,
-        use_reg_feat=config.model.use_reg_feat,
-        config=config,
-    )
-
+    model = Transformer(detector=detector, config=config)
     model = model.to(device)
 
     start_epoch = 0
@@ -80,8 +52,8 @@ def main(gpu, config):
     if os.path.exists(config.exp.checkpoint):
         checkpoint = torch.load(config.exp.checkpoint, map_location='cpu')
         missing, unexpected = model.load_state_dict(checkpoint['state_dict'], strict=False)
-        print("model missing:", len(missing))
-        print("model unexpected:", len(unexpected))
+        print(f"model missing:{len(missing)} model unexpected:{len(unexpected)}")
+
         if 'backbone' in checkpoint:
             model.detector.backbone.load_state_dict(checkpoint['backbone'], strict=False)
         if config.exp.resume:
