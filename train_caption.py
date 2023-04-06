@@ -64,12 +64,12 @@ def main(gpu, config):
 
     if start_epoch < config.optimizer.freezing_xe_epochs:
         if getattr(config.optimizer, 'freeze_backbone', False):
-            for p, n in model.named_parameters():
+            for n, p in model.named_parameters():
                 if 'backbone' in n:
                     p.requires_grad = False
 
         if getattr(config.optimizer, 'freeze_detector', False):
-            for p, n in model.named_parameters():
+            for n, p in model.named_parameters():
                 if 'detector' in n:
                     p.requires_grad = False
         else:
