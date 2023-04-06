@@ -44,6 +44,7 @@ class GridFeatureNetwork(nn.Module):
         d_in=1024,
         d_model=512,
         n_heads=8,
+        pad_idx=1,
         d_ff=2048,
         dropout=0.1,
         attn_dropout=0.0,
@@ -51,6 +52,7 @@ class GridFeatureNetwork(nn.Module):
         **kwargs,
     ):
         super().__init__()
+        self.pad_idx = pad_idx
         self.fc = nn.Linear(d_in, d_model)
         self.dropout = nn.Dropout(p=dropout)
         self.layer_norm = nn.LayerNorm(d_model)
@@ -72,7 +74,7 @@ class GridFeatureNetwork(nn.Module):
         out = self.layer_norm(out)
 
         if attention_mask is None:
-            attention_mask = (torch.sum(out, dim=-1) == self.padding_idx)
+            attention_mask = (torch.sum(out, dim=-1) == self.pad_idx)
             attention_mask = repeat(attention_mask, 'B N -> B 1 1 N')  # [B Head Nq N]
 
         outs = []
