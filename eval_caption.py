@@ -6,10 +6,8 @@ from omegaconf import DictConfig
 
 from datasets.caption.field import TextField
 from datasets.caption.coco import build_coco_dataloaders
-from models.caption import Transformer, GridFeatureNetwork, CaptionGenerator
-
+from models.caption import Transformer
 from models.caption.detector import build_detector
-from models.common.attention import MemoryAttention
 
 import torch
 import torch.distributed as dist

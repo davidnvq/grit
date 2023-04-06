@@ -8,9 +8,8 @@ from omegaconf import DictConfig
 from datasets.caption.field import TextField
 from datasets.caption.coco import build_coco_dataloaders
 from datasets.caption.metrics import PTBTokenizer, Cider
-from models.caption import Transformer, GridFeatureNetwork, CaptionGenerator
+from models.caption import Transformer
 from models.caption.detector import build_detector
-from models.common.attention import MemoryAttention
 from tools.extract_features import extract_vis_features
 from utils.cap_scheduler import CosineLRScheduler
 

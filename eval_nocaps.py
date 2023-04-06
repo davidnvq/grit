@@ -10,10 +10,8 @@ from datasets.caption.nocaps import NocapsDataset, NoCapsCollator
 
 from datasets.caption.field import TextField
 from datasets.caption.vocab import Vocab
-from models.caption import Transformer, GridFeatureNetwork, CaptionGenerator
-
+from models.caption import Transformer
 from models.caption.detector import build_detector
-from models.common.attention import MemoryAttention
 
 import torch
 
