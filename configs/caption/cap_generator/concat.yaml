@@ -1,3 +1,0 @@
-decoder_name: concat
-n_layers: 3
-vis_inputs: ['gri'] # [gri], [reg], [gri, reg]

@@ -15,21 +15,17 @@ class Transformer(BaseCaptioner):
         super(Transformer, self).__init__()
 
         self.grid_net = GridFeatureNetwork(
-            pad_idx=config.model.pad_idx,
+            n_layers=config.model.grid_net.n_layers,
             d_in=config.model.grid_feat_dim,
             dropout=config.model.dropout,
-            attn_dropout=config.model.attn_dropout,
-            attention_module=MemoryAttention,
-            **config.model.grit_net,
         )
         self.cap_generator = CaptionGenerator(
+            n_layers=config.model.cap_generator.n_layers,
             vocab_size=config.model.vocab_size,
             max_len=config.model.max_len,
             pad_idx=config.model.pad_idx,
             dropout=config.model.dropout,
-            attn_dropout=config.model.attn_dropout,
             cfg=config.model.cap_generator,
-            **config.model.cap_generator,
         )
 
         self.config = config

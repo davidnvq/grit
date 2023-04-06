@@ -8,79 +8,35 @@ from einops import repeat
 
 class TransformerLayer(nn.Module):
 
-    def __init__(
-        self,
-        d_model=512,
-        n_heads=8,
-        d_ff=2048,
-        dropout=.1,
-        attn_dropout=0.0,
-        attention_module=None,
-        **kwargs,
-    ):
-        super(TransformerLayer, self).__init__()
-        self.mhatt = MultiHeadAttention(
-            d_model,
-            n_heads,
-            dropout,
-            attention_module=attention_module,
-            attn_dropout=attn_dropout,
-            **kwargs,
-        )
+    def __init__(self, d_model=512, n_heads=8, d_ff=2048, dropout=.1, n_memories=0):
+        super().__init__()
+
+        self.mhatt = MultiHeadAttention(d_model, n_heads, dropout, n_memories=n_memories)
         self.pwff = FeedForward(d_model, d_ff, dropout)
 
-    def forward(self, queries, keys, values, attention_mask=None, attention_weights=None):
-        out = self.mhatt(queries, keys, values, attention_mask, attention_weights)
+    def forward(self, q, k, v, mask=None):
+        out = self.mhatt(q, k, v, mask)
         out = self.pwff(out)
         return out
 
 
 class GridFeatureNetwork(nn.Module):
 
-    def __init__(
-        self,
-        n_layers,
-        pad_idx,
-        d_in=1024,
-        d_model=512,
-        n_heads=8,
-        pad_idx=1,
-        d_ff=2048,
-        dropout=0.1,
-        attn_dropout=0.0,
-        attention_module=None,
-        **kwargs,
-    ):
+    def __init__(self, n_layers, d_in=1024, d_model=512, n_heads=8, d_ff=2048, dropout=0.1, n_memories=0):
         super().__init__()
-        self.pad_idx = pad_idx
         self.fc = nn.Linear(d_in, d_model)
         self.dropout = nn.Dropout(p=dropout)
         self.layer_norm = nn.LayerNorm(d_model)
-        self.layers = nn.ModuleList([
-            TransformerLayer(
-                d_model,
-                n_heads,
-                d_ff,
-                dropout,
-                attn_dropout=attn_dropout,
-                attention_module=attention_module,
-                **kwargs,
-            ) for _ in range(n_layers)
-        ])
+        self.layers = nn.ModuleList(
+            [TransformerLayer(d_model, n_heads, d_ff, dropout, n_memories=n_memories) for _ in range(n_layers)])
 
-    def forward(self, input, attention_mask=None, attention_weights=None):
-        out = F.relu(self.fc(input))
-        out = self.dropout(out)
-        out = self.layer_norm(out)
-
-        if attention_mask is None:
-            attention_mask = (torch.sum(out, dim=-1) == self.pad_idx)
-            attention_mask = repeat(attention_mask, 'B N -> B 1 1 N')  # [B Head Nq N]
+    def forward(self, input, mask=None):
+        out = self.layer_norm(self.dropout(F.relu(self.fc(input))))
 
         outs = []
-        for l in self.layers:
-            out = l(out, out, out, attention_mask, attention_weights)
+        for layer in self.layers:
+            out = layer(out, out, out, mask)
             outs.append(out.unsqueeze(1))
 
         outs = torch.cat(outs, 1)
-        return outs, attention_mask
+        return outs, mask

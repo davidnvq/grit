@@ -10,75 +10,20 @@ from models.caption.containers import Module, ModuleList
 
 class GeneratorLayer(Module):
 
-    def __init__(
-        self,
-        d_model=512,
-        n_heads=8,
-        d_ff=2048,
-        dropout=.1,
-        attn_dropout=0.0,
-        self_att_module=None,
-        self_att_module_kwargs=None,
-        **kwargs,
-    ):
-
+    def __init__(self, d_model=512, n_heads=8, d_ff=2048, dropout=.1, n_memories=0):
         super().__init__()
-        self.self_att = MultiHeadAttention(
-            d_model,
-            n_heads,
-            dropout,
-            attn_dropout=attn_dropout,
-            can_be_stateful=True,
-            attention_module=self_att_module,
-            attention_module_kwargs=self_att_module_kwargs,
-        )
+
+        self.self_att = MultiHeadAttention(d_model, n_heads, dropout, n_memories=n_memories, can_be_stateful=True)
         self.pwff = FeedForward(d_model, d_ff, dropout)
 
 
 class ParallelAttentionLayer(GeneratorLayer):
 
-    def __init__(
-        self,
-        d_model=512,
-        n_heads=8,
-        d_ff=2048,
-        dropout=.1,
-        attn_dropout=0.0,
-        self_att_module=None,
-        enc_att_module=None,
-        self_att_module_kwargs=None,
-        enc_att_module_kwargs=None,
-        activation='sigmoid',
-        **kwargs,
-    ):
-        super().__init__(
-            d_model=d_model,
-            n_heads=n_heads,
-            d_ff=d_ff,
-            dropout=dropout,
-            attn_dropout=attn_dropout,
-            self_att_module=self_att_module,
-            self_att_module_kwargs=self_att_module_kwargs,
-            **kwargs,
-        )
-        self.vis_att1 = MultiHeadAttention(
-            d_model,
-            n_heads,
-            dropout,
-            attn_dropout=attn_dropout,
-            can_be_stateful=False,
-            attention_module=enc_att_module,
-            attention_module_kwargs=enc_att_module_kwargs,
-        )
-        self.vis_att2 = MultiHeadAttention(
-            d_model,
-            n_heads,
-            dropout,
-            attn_dropout=attn_dropout,
-            can_be_stateful=False,
-            attention_module=enc_att_module,
-            attention_module_kwargs=enc_att_module_kwargs,
-        )
+    def __init__(self, d_model=512, n_heads=8, d_ff=2048, dropout=.1, activation='sigmoid', n_memories=0):
+        super().__init__(d_model=d_model, n_heads=n_heads, d_ff=d_ff, dropout=dropout, n_memories=0)
+
+        self.vis_att1 = MultiHeadAttention(d_model, n_heads, dropout, can_be_stateful=False, n_memories=n_memories)
+        self.vis_att2 = MultiHeadAttention(d_model, n_heads, dropout, can_be_stateful=False, n_memories=n_memories)
 
         self.fc_alpha1 = nn.Linear(d_model + d_model, d_model)
         self.fc_alpha2 = nn.Linear(d_model + d_model, d_model)
@@ -100,22 +45,8 @@ class ParallelAttentionLayer(GeneratorLayer):
         enc_att2 = self.vis_att2(self_att, y2, y2, mask_y2) * mask_pad
 
         # [B, N, D]
-        alpha1 = self.fc_alpha1(torch.cat([self_att, enc_att1], -1))
-        alpha2 = self.fc_alpha1(torch.cat([self_att, enc_att2], -1))
-
-        if self.activation == 'sigmoid':
-            alpha1 = torch.sigmoid(alpha1)
-            alpha2 = torch.sigmoid(alpha2)
-
-        if self.activation == 'softmax':
-            alpha = rearrange([alpha1, alpha2], 'n1 b n d -> n1 b n d')
-            alpha = torch.softmax(alpha, dim=0)
-            alpha1 = alpha[0]
-            alpha2 = alpha[1]
-
-        if self.activation == 'identity':
-            alpha1 = torch.ones_like(alpha1)
-            alpha2 = torch.ones_like(alpha2)
+        alpha1 = torch.sigmoid(self.fc_alpha1(torch.cat([self_att, enc_att1], -1)))
+        alpha2 = torch.sigmoid(self.fc_alpha1(torch.cat([self_att, enc_att2], -1)))
 
         enc_att = (enc_att1 * alpha1 + enc_att2 * alpha2) / np.sqrt(2)
         enc_att = enc_att * mask_pad
@@ -127,38 +58,9 @@ class ParallelAttentionLayer(GeneratorLayer):
 
 class ConcatAttentionLayer(GeneratorLayer):
 
-    def __init__(
-        self,
-        d_model=512,
-        n_heads=8,
-        d_ff=2048,
-        dropout=.1,
-        attn_dropout=0.0,
-        self_att_module=None,
-        enc_att_module=None,
-        self_att_module_kwargs=None,
-        enc_att_module_kwargs=None,
-        **kwargs,
-    ):
-        super().__init__(
-            d_model=d_model,
-            n_heads=n_heads,
-            d_ff=d_ff,
-            dropout=dropout,
-            attn_dropout=attn_dropout,
-            self_att_module=self_att_module,
-            self_att_module_kwargs=self_att_module_kwargs,
-            **kwargs,
-        )
-        self.vis_att = MultiHeadAttention(
-            d_model,
-            n_heads,
-            dropout,
-            attn_dropout=attn_dropout,
-            can_be_stateful=False,
-            attention_module=enc_att_module,
-            attention_module_kwargs=enc_att_module_kwargs,
-        )
+    def __init__(self, d_model=512, n_heads=8, d_ff=2048, dropout=0.1, n_memories=0):
+        super().__init__(d_model=d_model, n_heads=n_heads, d_ff=d_ff, dropout=dropout, n_memories=0)
+        self.vis_att = MultiHeadAttention(d_model, n_heads, dropout, can_be_stateful=False, n_memories=n_memories)
 
     def forward(self, x, y, mask_pad, mask_x, mask_y):
         out = self.self_att(x, x, x, mask_x) * mask_pad
@@ -169,49 +71,11 @@ class ConcatAttentionLayer(GeneratorLayer):
 
 class SequentialAttentionLayer(GeneratorLayer):
 
-    def __init__(
-        self,
-        d_model=512,
-        n_heads=8,
-        d_ff=2048,
-        dropout=.1,
-        attn_dropout=0.0,
-        self_att_module=None,
-        enc_att_module=None,
-        self_att_module_kwargs=None,
-        enc_att_module_kwargs=None,
-        **kwargs,
-    ):
-        super().__init__(
-            d_model=d_model,
-            n_heads=n_heads,
-            d_ff=d_ff,
-            dropout=dropout,
-            attn_dropout=attn_dropout,
-            self_att_module=self_att_module,
-            self_att_module_kwargs=self_att_module_kwargs,
-            **kwargs,
-        )
-        self.vis_att1 = MultiHeadAttention(
-            d_model,
-            n_heads,
-            dropout,
-            attn_dropout=attn_dropout,
-            can_be_stateful=False,
-            attention_module=enc_att_module,
-            attention_module_kwargs=enc_att_module_kwargs,
-        )
+    def __init__(self, d_model=512, n_heads=8, d_ff=2048, dropout=.1, n_memories=0):
+        super().__init__(d_model=d_model, n_heads=n_heads, d_ff=d_ff, dropout=dropout, n_memories=0)
 
-        self.vis_att2 = MultiHeadAttention(
-            d_model,
-            n_heads,
-            dropout,
-            attn_dropout=attn_dropout,
-            can_be_stateful=False,
-            attention_module=enc_att_module,
-            attention_module_kwargs=enc_att_module_kwargs,
-        )
-
+        self.vis_att1 = MultiHeadAttention(d_model, n_heads, dropout, can_be_stateful=False, n_memories=n_memories)
+        self.vis_att2 = MultiHeadAttention(d_model, n_heads, dropout, can_be_stateful=False, n_memories=n_memories)
         self.pwff = FeedForward(d_model, d_ff, dropout)
 
     def forward(self, x, y1, y2, mask_pad, mask_x, mask_y1, mask_y2):
@@ -230,25 +94,17 @@ class CaptionGenerator(Module):
         'sequential': SequentialAttentionLayer,
     }
 
-    def __init__(
-        self,
-        vocab_size,
-        max_len,
-        n_layers,
-        pad_idx,
-        d_model=512,
-        n_heads=8,
-        d_ff=2048,
-        dropout=.1,
-        attn_dropout=0.0,
-        self_att_module=None,
-        enc_att_module=None,
-        self_att_module_kwargs=None,
-        enc_att_module_kwargs=None,
-        decoder_name='parallel',
-        cfg=None,
-        **kwargs,
-    ):
+    def __init__(self,
+                 vocab_size,
+                 max_len,
+                 n_layers,
+                 pad_idx,
+                 d_model=512,
+                 n_heads=8,
+                 d_ff=2048,
+                 dropout=.1,
+                 decoder_name='parallel',
+                 cfg=None):
         super().__init__()
         self.d_model = d_model
         self.word_emb = nn.Embedding(vocab_size, d_model, padding_idx=pad_idx)
@@ -258,20 +114,7 @@ class CaptionGenerator(Module):
         self.decoder_name = decoder_name
         generator_layer = self.GENERATOR_LAYER[self.decoder_name]
 
-        self.layers = ModuleList([
-            generator_layer(
-                d_model,
-                n_heads,
-                d_ff,
-                dropout,
-                attn_dropout=attn_dropout,
-                self_att_module=self_att_module,
-                enc_att_module=enc_att_module,
-                self_att_module_kwargs=self_att_module_kwargs,
-                enc_att_module_kwargs=enc_att_module_kwargs,
-                **kwargs,
-            ) for _ in range(n_layers)
-        ])
+        self.layers = ModuleList([generator_layer(d_model, n_heads, d_ff, dropout) for _ in range(n_layers)])
         self.fc = nn.Linear(d_model, vocab_size, bias=False)
         self.max_len = max_len
         self.pad_idx = pad_idx
@@ -299,54 +142,34 @@ class CaptionGenerator(Module):
             seq = self.running_seq
         x = self.word_emb(input) + self.pos_emb(seq)
 
-        return {
-            'mask_pad': mask_pad,
-            'mask_x': mask_x,
-            'seq': seq,
-            'x': x,
-        }
+        return x, mask_x, mask_pad
 
     def forward(self, input, vis_inputs):
-        seq_inputs = self.get_seq_inputs(input)
-        mask_pad = seq_inputs['mask_pad']
-        mask_x = seq_inputs['mask_x']
-        x = seq_inputs['x']
+        x, mask_x, mask_pad = self.get_seq_inputs(input)
 
         if self.decoder_name == 'concat':
-            y, mask_y = [], []
-            if 'gri' in self.cfg.vis_inputs:
-                y.append(vis_inputs['gri_feat'])
-                mask_y.append(vis_inputs['gri_mask'])
-            if 'reg' in self.cfg.vis_inputs:
-                y.append(vis_inputs['reg_feat'])
-                mask_y.append(vis_inputs['reg_mask'])
+            y = torch.cat([vis_inputs['grid_feat'], vis_inputs['reg_feat']], dim=1)
+            mask_y = torch.cat([vis_inputs['gri_mask'], vis_inputs['reg_mask']], dim=3)
 
-            y = torch.cat(y, dim=1)
-            mask_y = torch.cat(mask_y, dim=3)
-            for i, l in enumerate(self.layers):
-                x = l(x, y, mask_pad, mask_x, mask_y)
+            for layer in self.layers:
+                x = layer(x, y, mask_pad, mask_x, mask_y)
 
         if self.decoder_name == 'sequential':
-            if self.cfg.sequential_order == 'gri_reg':
-                y1 = vis_inputs['gri_feat']
-                y2 = vis_inputs['reg_feat']
-                mask_y1 = vis_inputs['gri_mask']
-                mask_y2 = vis_inputs['reg_mask']
-            else:
-                y1 = vis_inputs['reg_feat']
-                y2 = vis_inputs['gri_feat']
-                mask_y1 = vis_inputs['reg_mask']
-                mask_y2 = vis_inputs['gri_mask']
+            y1 = vis_inputs['gri_feat']
+            y2 = vis_inputs['reg_feat']
+            mask_y1 = vis_inputs['gri_mask']
+            mask_y2 = vis_inputs['reg_mask']
 
-            for i, l in enumerate(self.layers):
-                x = l(x, y1, y2, mask_pad, mask_x, mask_y1, mask_y2)
+            for layer in self.layers:
+                x = layer(x, y1, y2, mask_pad, mask_x, mask_y1, mask_y2)
 
         if self.decoder_name == 'parallel':
             y1 = vis_inputs['gri_feat']
             y2 = vis_inputs['reg_feat']
             mask_y1 = vis_inputs['gri_mask']
             mask_y2 = vis_inputs['reg_mask']
-            for i, l in enumerate(self.layers):
-                x = l(x, y1, y2, mask_pad, mask_x, mask_y1, mask_y2)
+
+            for layer in self.layers:
+                x = layer(x, y1, y2, mask_pad, mask_x, mask_y1, mask_y2)
         x = self.fc(x)
         return F.log_softmax(x, dim=-1)

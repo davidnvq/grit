@@ -30,23 +30,17 @@ def main(gpu, config):
 
     # extract reg features + initial grid features
     detector = build_detector(config).to(device)
+
     model = Transformer(detector=detector, config=config)
+    model.load_state_dict(torch.load(config.exp.checkpoint)['state_dict'], strict=False)
     model = model.to(device)
 
-    if os.path.exists(config.exp.checkpoint):
-        checkpoint = torch.load(config.exp.checkpoint, map_location='cpu')
-        missing, unexpected = model.load_state_dict(checkpoint['state_dict'], strict=False)
-        print(f"model missing:{len(missing)} model unexpected:{len(unexpected)}")
-
     model = DDP(model, device_ids=[gpu], find_unused_parameters=True, broadcast_buffers=False)
-    model.module.cached_features = False
 
     dataloaders, samplers = build_coco_dataloaders(config, mode='finetune', device=device)
 
     text_field = TextField(vocab_path=config.dataset.vocab_path)
 
-    with open('test.txt', 'w') as f:
-        f.write("Testttt")
     split = config.split
     print(f"Evaluating on split: {split}")
     scores = evaluate_metrics(
@@ -72,9 +66,6 @@ def run_main(config: DictConfig) -> None:
 
 
 if __name__ == "__main__":
-    if os.environ["USER"] == 'quang':
-        os.environ["DATA_ROOT"] = "/home/quang/datasets/coco_caption"
-
     os.environ["MASTER_ADDR"] = "localhost"
     os.environ["MASTER_PORT"] = "6688"
     run_main()

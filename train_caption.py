@@ -36,11 +36,7 @@ def main(gpu, config):
 
     # extract features
     detector = build_detector(config).to(device)
-
-    if os.path.exists(config.model.detector.checkpoint):
-        checkpoint = torch.load(config.model.detector.checkpoint, map_location='cpu')
-        missing, unexpected = detector.load_state_dict(checkpoint['model'], strict=False)
-        print(f"det missing:{len(missing)} det unexpected:{len(unexpected)}")
+    detector.load_state_dict(torch.load(config.model.detector.checkpoint)['model'], strict=False)
 
     model = Transformer(detector=detector, config=config)
     model = model.to(device)
@@ -48,18 +44,6 @@ def main(gpu, config):
     start_epoch = 0
     best_cider_val = 0.0
     best_cider_test = 0.0
-    if os.path.exists(config.exp.checkpoint):
-        checkpoint = torch.load(config.exp.checkpoint, map_location='cpu')
-        missing, unexpected = model.load_state_dict(checkpoint['state_dict'], strict=False)
-        print(f"model missing:{len(missing)} model unexpected:{len(unexpected)}")
-
-        if 'backbone' in checkpoint:
-            model.detector.backbone.load_state_dict(checkpoint['backbone'], strict=False)
-        if config.exp.resume:
-            start_epoch = checkpoint['epoch'] + 1
-            print(f"Resume model at epoch {start_epoch} from checkpoint {config.exp.checkpoint}")
-            if 'best_ciders' in checkpoint:
-                best_cider_val, best_cider_test = checkpoint['best_ciders']
 
     if start_epoch < config.optimizer.freezing_xe_epochs:
         if getattr(config.optimizer, 'freeze_backbone', False):

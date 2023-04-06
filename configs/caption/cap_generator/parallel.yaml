@@ -1,3 +1,0 @@
-decoder_name: parallel
-n_layers: 3
-activation: sigmoid # softmax, identity

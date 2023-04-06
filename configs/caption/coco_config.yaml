@@ -8,10 +8,6 @@ exp:
   eval: False
   resume: False
 
-defaults:
-  - _self_
-  - cap_generator@model.cap_generator: parallel # parallel, sequential, concat
-
 dataset:
   overfit: False
   ann_root: '${oc.env:DATA_ROOT}/annotations'
@@ -44,8 +40,12 @@ model:
   d_model: 512
   n_heads: 8
 
-  grit_net:
+  grid_net:
     n_memories: 1
+    n_layers: 3
+
+  cap_generator:
+    decoder_name: parallel # sequential concat
     n_layers: 3
 
   detector: 
