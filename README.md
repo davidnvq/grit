@@ -14,11 +14,12 @@ This paper proposes a Transformer neural architecture, dubbed <b>GRIT</b> (Grid-
 
 
 ## Model Zoo
-
-- pretrained object detector on Visual Genome: [checkpoint](https://drive.google.com/file/d/1dlzNkbs81ZSdeGCxKrRhLGKK_TBTdXjL/view?usp=sharing).
-- pretrained object detector on 4 datasets: [checkpoint](https://drive.google.com/file/d/1J2_Q3n4BHQgh0JhImd7c39wx5hEFzjzB/view?usp=sharing).
-- checkpoint for GRIT on image caption (using the detector pretrained on VG): [checkpoint](https://drive.google.com/file/d/1ViqBJ_i9CVABpy48pOAC1MDHZ6e5Zj1v/view?usp=sharing).
-- checkpoint for GRIT on image caption (using the detector pretrained on 4DS): [checkpoint](https://drive.google.com/file/d/1WLsMrtVFTftSJiGHg7iALNFImtefHtOT/view?usp=sharing). 
+| Model                                           | Task             | Checkpoint                                                                                           |
+|-------------------------------------------------|------------------|------------------------------------------------------------------------------------------------------|
+| Pretrained object detector (A) on Visual Genome | Object Detection | [GG Drive link](https://drive.google.com/file/d/1dlzNkbs81ZSdeGCxKrRhLGKK_TBTdXjL/view?usp=sharing)  |
+| Pretrained object detector (B) on 4 OD datasets | Object Detection | [GG Drive link](https://drive.google.com/file/d/1J2_Q3n4BHQgh0JhImd7c39wx5hEFzjzB/view?usp=sharing)  |
+| GRIT (using the object detector A)              | Image Captioning | [GG Drive link](https://drive.google.com/file/d/1ViqBJ_i9CVABpy48pOAC1MDHZ6e5Zj1v/view?usp=sharing) |
+| GRIT (using the object detector B)              | Image Captioning | [GG Drive link](https://drive.google.com/file/d/1WLsMrtVFTftSJiGHg7iALNFImtefHtOT/view?usp=sharing) |
 
 ## Installation
 
