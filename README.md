@@ -54,7 +54,6 @@ python test.py
 
 ## Usage
 
-> Currently, the README and source code are under its initial version. The cleaned and detailed version may be updated soon.
 
 ### Data preparation
 
