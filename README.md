@@ -16,10 +16,10 @@ This paper proposes a Transformer neural architecture, dubbed <b>GRIT</b> (Grid-
 ## Model Zoo
 | Model                                           | Task             | Checkpoint                                                                                           |
 |-------------------------------------------------|------------------|------------------------------------------------------------------------------------------------------|
-| Pretrained object detector (A) on Visual Genome | Object Detection | [GG Drive link](https://drive.google.com/file/d/1dlzNkbs81ZSdeGCxKrRhLGKK_TBTdXjL/view?usp=sharing)  |
-| Pretrained object detector (B) on 4 OD datasets | Object Detection | [GG Drive link](https://drive.google.com/file/d/1J2_Q3n4BHQgh0JhImd7c39wx5hEFzjzB/view?usp=sharing)  |
-| GRIT (using the object detector A)              | Image Captioning | [GG Drive link](https://drive.google.com/file/d/1ViqBJ_i9CVABpy48pOAC1MDHZ6e5Zj1v/view?usp=sharing) |
-| GRIT (using the object detector B)              | Image Captioning | [GG Drive link](https://drive.google.com/file/d/1WLsMrtVFTftSJiGHg7iALNFImtefHtOT/view?usp=sharing) |
+| Pretrained object detector (A) on Visual Genome | Object Detection | [GG Drive link](https://drive.google.com/file/d/1ZWPovkK5YhxtyCaVULCTNoPu8Jd-MKGh/view?usp=share_link)  |
+| Pretrained object detector (B) on 4 OD datasets | Object Detection | [GG Drive link](https://drive.google.com/file/d/1xERJN3CvQcUcwgRZd31CUsnep_xnELcs/view?usp=share_link)  |
+| GRIT (using the object detector A)              | Image Captioning | [GG Drive link](https://drive.google.com/file/d/12tsI3Meka2mNLON-tWTnVJnUzUOa-foW/view?usp=share_link) |
+| GRIT (using the object detector B)              | Image Captioning | [GG Drive link](https://drive.google.com/file/d/1jgEqNFuKcKg_RcG4Nq8bhWvCgzi6bjuD/view?usp=share_link) |
 
 ## Installation
 
