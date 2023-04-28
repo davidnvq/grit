@@ -50,16 +50,7 @@ class Transformer(BaseCaptioner):
             if p.dim() > 1:
                 nn.init.xavier_uniform_(p)
 
-    def forward(self,
-                images,
-                seq,
-                use_beam_search=False,
-                max_len=20,
-                eos_idx=3,
-                beam_size=5,
-                out_size=1,
-                return_probs=False,
-                **kwargs):
+    def forward(self, images, seq, use_beam_search=False, max_len=20, eos_idx=3, beam_size=5, out_size=1, return_probs=False, **kwargs):
         if not use_beam_search:
             if not self.cached_features:
                 vis_inputs = self.detector(images)
@@ -67,7 +58,7 @@ class Transformer(BaseCaptioner):
                 vis_inputs = images
 
             if self.config.model.use_gri_feat:
-                gri_feat, _ = self.grid_net(vis_inputs['gri_feat'], attention_mask=vis_inputs['gri_mask'])
+                gri_feat, _ = self.grid_net(vis_inputs['gri_feat'], vis_inputs['gri_mask'])
                 vis_inputs['gri_feat'] = gri_feat[:, -1]
 
             dec_output = self.cap_generator(seq, vis_inputs)
@@ -115,12 +106,10 @@ class Transformer(BaseCaptioner):
             log_probs = torch.gather(log_probs, 1, sort_idxs.expand(batch_size, beam_size, max_len))
             if return_probs:
                 all_log_probs = torch.cat(self.all_log_probs, 2)
-                all_log_probs = torch.gather(
-                    all_log_probs, 1,
-                    sort_idxs.unsqueeze(-1).expand(batch_size, beam_size, max_len, all_log_probs.shape[-1]))
+                all_log_probs = torch.gather(all_log_probs, 1,
+                                             sort_idxs.unsqueeze(-1).expand(batch_size, beam_size, max_len, all_log_probs.shape[-1]))
 
-            outputs = outputs.contiguous()[:, :
-                                           out_size]  # [B Beam Len] -> [B, :topk, Len] select only the top k sentences
+            outputs = outputs.contiguous()[:, :out_size]  # [B Beam Len] -> [B, :topk, Len] select only the top k sentences
             log_probs = log_probs.contiguous()[:, :out_size]  # [B Beam Len] -> [B Len] select only the top k sentences
             if out_size == 1:
                 outputs = outputs.squeeze(1)  # [B :topk, len] = [B, len] if topk = 1
@@ -194,8 +183,7 @@ class Transformer(BaseCaptioner):
             beam = selected_beam
             for _ in shape[1:]:
                 beam = beam.unsqueeze(-1)
-            tensor = torch.gather(tensor.view(*([batch_size, cur_beam_size] + shape[1:])), 1,
-                                  beam.expand(*([batch_size, beam_size] + shape[1:])))
+            tensor = torch.gather(tensor.view(*([batch_size, cur_beam_size] + shape[1:])), 1, beam.expand(*([batch_size, beam_size] + shape[1:])))
             tensor = tensor.view(*([-1] + shape[1:]))
             return tensor
 

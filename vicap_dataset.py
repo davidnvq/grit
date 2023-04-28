@@ -12,8 +12,12 @@ import spacy
 import torch
 from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import DataLoader, Dataset
+from torch.utils.data import DataLoader, DistributedSampler, BatchSampler
+from engine.utils import nested_tensor_from_tensor_list
+
 import torchvision.transforms as T
 from collections import defaultdict
+from datasets.caption.transforms import *
 
 spacy_eng = spacy.load('en_core_web_sm')
 
@@ -21,8 +25,7 @@ train_image_path = Path("/media/local_workspace/quang/datasets/vietcap/train-ima
 test_image_path = Path("/media/local_workspace/quang/datasets/vietcap/public-test-images")
 train_caption_path = "/media/local_workspace/quang/datasets/vietcap/thesis_test/train_data.json"
 test_caption_path = "/media/local_workspace/quang/datasets/vietcap/thesis_test/test_data.json"
-
-vi_caption_path = "vi_captions.json"
+vi_caption_path = "/media/local_workspace/quang/datasets/vietcap/vi_captions.json"
 
 
 def get_transform(resize_name="maxwh", size=[384, 640], randaug=False):
@@ -42,7 +45,7 @@ def get_transform(resize_name="maxwh", size=[384, 640], randaug=False):
 class Vocabulary:
 
     def __init__(self, freq_threshold):
-        self.itos = {0: "<PAD>", 1: "<SOS>", 2: "<EOS>", 3: "<UNK>"}
+        self.itos = {0: "<unk>", 1: "<pad>", 2: "<bos>", 3: "<eos>"}
         self.stoi = {v: k for k, v in self.itos.items()}
         self.freq_threshold = freq_threshold
 
@@ -67,7 +70,7 @@ class Vocabulary:
 
     def numericalize(self, text):
         tokenized_text = self.tokenize(text)
-        return [self.stoi[token] if token in self.stoi else self.stoi["<UNK>"] for token in tokenized_text]
+        return [self.stoi[token] if token in self.stoi else self.stoi["<unk>"] for token in tokenized_text]
 
 
 class CustomDataset(Dataset):
@@ -99,13 +102,13 @@ class CustomDataset(Dataset):
             img = self.transform(image)
 
         caption_vec = []
-        caption_vec += [self.vocab.stoi["<SOS>"]]
+        caption_vec += [self.vocab.stoi["<bos>"]]
         caption_vec += self.vocab.numericalize(caption)
-        caption_vec += [self.vocab.stoi["<EOS>"]]
+        caption_vec += [self.vocab.stoi["<eos>"]]
         return img, torch.tensor(caption_vec), caption
 
 
-class EvalDataset(CustomDataset):
+class DictDataset(CustomDataset):
 
     def __init__(self, root_dir, captions_file, vicap_file=vi_caption_path, transform=None, freq_threshold=1):
         super().__init__(root_dir, captions_file, vicap_file, transform, freq_threshold)
@@ -135,7 +138,7 @@ class EvalDataset(CustomDataset):
 
 class EvalCollate:
 
-    def __init__(self, pad_idx, batch_first=False, device="cuda"):
+    def __init__(self, pad_idx, batch_first=True, device="cuda"):
         self.pad_idx = pad_idx
         self.batch_first = batch_first
         self.device = device
@@ -151,7 +154,7 @@ class EvalCollate:
 
 class CapsCollate:
 
-    def __init__(self, pad_idx, batch_first=False, device="cuda"):
+    def __init__(self, pad_idx, batch_first=True, device="cuda"):
         self.pad_idx = pad_idx
         self.batch_first = batch_first
         self.device = device
@@ -162,8 +165,65 @@ class CapsCollate:
 
         targets = [item[1] for item in batch]
         targets = pad_sequence(targets, batch_first=self.batch_first, padding_value=self.pad_idx)
-        captions = [item[2] for item in batch]
-        return imgs, targets, captions
+        targets = targets.to(self.device)
+        return {'samples': imgs, 'captions': targets}
+
+
+def get_datasets():
+    transforms = get_transform(resize_name="maxwh", size=[384, 640], randaug=False)
+
+    train_dataset = CustomDataset(
+        root_dir=train_image_path,
+        captions_file=train_caption_path,
+        vicap_file=vi_caption_path,
+        transform=transforms['train'],
+    )
+    valid_dataset = CustomDataset(
+        root_dir=test_image_path,
+        captions_file=test_caption_path,
+        vicap_file=vi_caption_path,
+        transform=transforms['valid'],
+    )
+
+    train_dict_dataset = DictDataset(
+        root_dir=train_image_path,
+        captions_file=train_caption_path,
+        vicap_file=vi_caption_path,
+        transform=transforms['train'],
+    )
+    valid_dict_dataset = DictDataset(
+        root_dir=test_image_path,
+        captions_file=test_caption_path,
+        vicap_file=vi_caption_path,
+        transform=transforms['valid'],
+    )
+    return {
+        'train': train_dataset,
+        'valid': valid_dataset,
+        'train_dict': train_dict_dataset,
+        'valid_dict': valid_dict_dataset,
+    }
+
+
+def get_dataloaders(device="cuda"):
+    datasets = get_datasets()
+
+    collators = {
+        'train': CapsCollate(datasets['train'].vocab.stoi['<pad>'], device=device),
+        'valid': CapsCollate(datasets['valid'].vocab.stoi['<pad>'], device=device),
+        'train_dict': EvalCollate(datasets['train_dict'].vocab.stoi['<pad>'], device=device),
+        'valid_dict': EvalCollate(datasets['valid_dict'].vocab.stoi['<pad>'], device=device)
+    }
+
+    samplers = {
+        'train': DistributedSampler(datasets['train'], shuffle=True),
+        'valid': DistributedSampler(datasets['valid'], shuffle=False),
+        'train_dict': DistributedSampler(datasets['train_dict'], shuffle=True),
+        'valid_dict': DistributedSampler(datasets['valid_dict'], shuffle=False)
+    }
+
+    dataloaders = {k: DataLoader(datasets[k], batch_size=8, num_workers=4, collate_fn=collators[k], sampler=samplers[k]) for k in datasets}
+    return samplers, dataloaders
 
 
 if __name__ == "__main__":
@@ -180,13 +240,8 @@ if __name__ == "__main__":
         json.dump(all_captions, f, indent=4, ensure_ascii=False)
 
     # build datasets
-    transforms = get_transform(resize_name="maxwh", size=[384, 640], randaug=False)
-
-    train_dataset = CustomDataset(root_dir=train_image_path,
-                                  captions_file=train_caption_path,
-                                  vicap_file=vi_caption_path,
-                                  transform=transforms['train'])
-    test_dataset = EvalDataset(root_dir=test_image_path, captions_file=test_caption_path, vicap_file=vi_caption_path, transform=transforms['valid'])
+    datasets = get_datasets()
+    train_dataset, test_dataset = datasets['train'], datasets['valid']
 
     # train_dataset
     img, target, caption = train_dataset[0]
@@ -200,3 +255,21 @@ if __name__ == "__main__":
     print(img.shape)
     print(captions)
     print(img_id)
+
+    train_loader = DataLoader(train_dataset, batch_size=2, shuffle=True, collate_fn=CapsCollate(train_dataset.vocab.stoi["<pad>"]))
+    valid_loader = DataLoader(test_dataset, batch_size=2, shuffle=False, collate_fn=EvalCollate(train_dataset.vocab.stoi["<pad>"]))
+
+    dataloaders = {'train': train_loader, 'valid': valid_loader}
+    vocab = train_dataset.vocab
+
+    for batch in valid_loader:
+        imgs, captions = batch['samples'], batch['captions']
+        print(imgs.tensors.shape)
+        print(captions)
+        break
+
+    for batch in train_loader:
+        imgs, captions = batch['samples'], batch['captions']
+        print(imgs.tensors.shape)
+        print(captions.shape)
+        break

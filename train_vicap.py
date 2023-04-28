@@ -21,6 +21,143 @@ from torch.utils.tensorboard import SummaryWriter
 from engine.caption_engine import *
 from vicap_dataset import *
 
+import os
+import time
+import json
+import torch
+import itertools
+import numpy as np
+from tqdm import tqdm
+from datasets.caption import metrics
+from torch.nn import NLLLoss
+import torch.distributed as dist
+from engine.utils import NestedTensor
+
+
+def evaluate_metrics(
+    model,
+    optimizers,
+    dataloader,
+    epoch=0,
+    split='test',
+    config=None,
+    which='ft_xe',
+    scheduler=None,
+):
+    model.eval()
+    pred_captions = {}
+    gt_captions = {}
+    vocab = dataloader.dataset.vocab
+    for it, batch in enumerate(iter(dataloader)):
+        with torch.no_grad():
+            out, _ = model(
+                batch['samples'],
+                seq=None,
+                use_beam_search=True,
+                max_len=config.model.beam_len,
+                eos_idx=config.model.eos_idx,
+                beam_size=config.model.beam_size,
+                out_size=1,
+                return_probs=False,
+            )
+
+        torch.cuda.synchronize()
+
+        # decode and compute scores
+        out = out.cpu().numpy()
+
+        batch_predictions = []
+        for token_ids in out:
+            caption = []
+            for token_id in token_ids:
+                token = vocab.itos[token_id]
+                if token == "<eos>":
+                    break
+                if token in ["<pad>", "<unk>", "<sos>", "eos"]:
+                    continue
+                caption.append(token)
+            batch_predictions.append(" ".join(caption))
+
+        bs = batch['samples'].tensors.shape[0]
+
+        for i, (gts_i, pred_i) in enumerate(zip(batch['captions'], batch_predictions)):
+            pred_captions[f'{it}_{i}'] = [pred_i]
+            gt_captions[f'{it}_{i}'] = gts_i
+
+    scores = metrics.compute_scores(gt_captions, pred_captions)[0]
+    print(f'Epoch {epoch}: {split} scores: ' + str(scores) + '\n')
+    return scores
+
+
+def evaluate_loss(model, dataloader, loss_fn, epoch):
+    vocab = dataloader.dataset.vocab
+
+    model.eval()
+
+    running_loss = .0
+    with tqdm(desc='Epoch %d - validation' % epoch, unit='it', total=len(dataloader)) as pbar:
+        with torch.no_grad():
+            for it, batch in enumerate(dataloader):
+                out = model(batch['samples'], batch['captions'])
+
+                captions_gt = batch['captions'][:, 1:].contiguous()
+                out = out[:, :-1].contiguous()
+                loss = loss_fn(out.view(-1, out.shape[-1]), captions_gt.view(-1))
+
+                loss = gather_result(loss)
+                running_loss += loss.item()
+
+                pbar.set_postfix(loss=running_loss / (it + 1))
+                pbar.update()
+
+    val_loss = running_loss / len(dataloader)
+    return val_loss
+
+
+def train_xe(
+    model,
+    dataloaders,
+    optimizers,
+    epoch,
+    rank=0,
+    config=None,
+    scheduler=None,
+):
+    vocab = dataloaders['train'].dataset.vocab
+
+    model.train()
+    loss_fn = NLLLoss(ignore_index=vocab.stoi['<pad>'])
+    if scheduler is not None:
+        scheduler.step()
+    running_loss = .0
+    with tqdm(desc=f'Epoch {epoch} - train', unit='it', total=len(dataloaders['train'])) as pbar:
+        for it, batch in enumerate(dataloaders['train']):
+            out = model(batch['samples'], batch['captions'])
+            optimizers['model'].zero_grad()
+            optimizers['backbone'].zero_grad()
+
+            captions_gt = batch['captions'][:, 1:].contiguous()
+            out = out[:, :-1].contiguous()
+            loss = loss_fn(out.view(-1, out.shape[-1]), captions_gt.view(-1))
+            loss.backward()
+
+            optimizers['model'].step()
+            optimizers['backbone'].step()
+
+            loss = gather_result(loss)
+            running_loss += loss.item()
+
+            pbar.set_postfix(loss=running_loss / (it + 1))
+            pbar.update()
+
+            if scheduler is not None:
+                lr = scheduler.step()
+
+    train_loss = running_loss / len(dataloaders['train'])
+    val_loss = evaluate_loss(model, dataloaders['valid'], loss_fn, epoch)
+    torch.distributed.barrier()
+    return train_loss, val_loss
+
 
 def main(gpu, config):
     # dist init
@@ -35,116 +172,77 @@ def main(gpu, config):
     device = torch.device(f"cuda:{gpu}")
     torch.cuda.set_device(gpu)
 
-    # extract features
+    # build dataloaders
+    print("Building dataloaders...")
+    from vicap_dataset import get_dataloaders
+    samplers, dataloaders = get_dataloaders(device=device)
+
+    # build models
+    print("Building models...")
     detector = build_detector(config).to(device)
-    detector.load_state_dict(torch.load(config.model.detector.checkpoint)['model'], strict=False)
 
     model = Transformer(detector=detector, config=config)
-    model = model.to(device)
+    # load checkpoint
+    if os.path.exists(config.exp.checkpoint):
+        checkpoint = torch.load(config.exp.checkpoint, map_location='cpu')
+        missing, unexpected = model.load_state_dict(checkpoint['state_dict'], strict=False)
+        print(f"det missing:{len(missing)} det unexpected:{len(unexpected)}")
 
-    start_epoch = 0
-    best_cider_val = 0.0
-    best_cider_test = 0.0
+    model.cached_features = False
+
+    model = model.to(device)
 
     model = DDP(model, device_ids=[gpu], find_unused_parameters=True, broadcast_buffers=False)
     optimizers = build_optimizers(model, config, mode='xe')
 
-    # tensorboard:
-    writer = SummaryWriter(log_dir='tensorboard') if rank == 0 or rank == 1 else None
+    scheduler = CosineLRScheduler(
+        optimizers['model'],
+        num_epochs=config.optimizer.finetune_xe_epochs,
+        num_its_per_epoch=len(dataloaders['train']),
+        init_lr=config.optimizer.xe_lr,
+        min_lr=config.optimizer.min_lr,
+        warmup_init_lr=config.optimizer.warmup_init_lr,
+    )
 
-    # dataloaders
+    with open("result.csv", "w") as f:
+        f.write("epoch, train_loss, val_loss, Bleu_1, Bleu_4, METEOR, ROUGE, CIDEr\n")
 
-    text_field = TextField(vocab_path=config.dataset.vocab_path)
-    train_dataset = dataloaders['train'].dataset
-    cider = Cider(PTBTokenizer.tokenize([e.text for e in train_dataset.examples]))
-    tokenizer = multiprocessing.Pool(8)  #config.optimizer.num_workers)
-
-    fr_xe_epochs = config.optimizer.freezing_xe_epochs  # 10
-    fr_sc_epochs = fr_xe_epochs + config.optimizer.freezing_sc_epochs  # 15
-    ft_xe_epochs = fr_sc_epochs + config.optimizer.finetune_xe_epochs  # 20
-    ft_sc_epochs = ft_xe_epochs + config.optimizer.finetune_sc_epochs  # 20
-    total_epochs = ft_sc_epochs
-
-    for epoch in range(max(0, start_epoch), total_epochs):
-        phase = 'ft_xe'
-        train_res = train_xe(
-            model,
-            dataloaders,
-            optimizers=optimizers,
-            text_field=text_field,
-            epoch=epoch,
-            rank=rank,
-            config=config,
-            scheduler=scheduler,
-            writer=writer,
-        )
+    best_cider = 0.
+    phase = 'ft_xe'
+    for epoch in range(10):
+        train_loss, val_loss = train_xe(model, dataloaders, optimizers=optimizers, epoch=epoch, rank=rank, config=config, scheduler=scheduler)
         samplers['train'].set_epoch(epoch)
 
         if rank == 0:
-            best_cider_val = evaluate_metrics(
+            scores = evaluate_metrics(
                 model,
                 optimizers,
                 dataloader=dataloaders['valid_dict'],
-                text_field=text_field,
                 epoch=epoch,
                 split='valid',
                 config=config,
-                train_res=train_res,
-                writer=writer,
-                best_cider=best_cider_val,
                 which=phase,
                 scheduler=scheduler,
             )
 
-        if rank == 1:
-            best_cider_test = evaluate_metrics(
-                model,
-                optimizers,
-                dataloader=dataloaders['test_dict'],
-                text_field=text_field,
-                epoch=epoch,
-                split='test',
-                config=config,
-                train_res=train_res,
-                writer=writer,
-                best_cider=best_cider_test,
-                which=phase,
-                scheduler=scheduler,
-            )
+            torch.save({"state_dict": model.module.state_dict()}, f"model.pth")
+            if scores['CIDEr'] > best_cider:
+                best_cider = scores['CIDEr']
+                torch.save({"state_dict": model.module.state_dict()}, f"model_best.pth")
 
-        if rank == 0:
-            save_checkpoint(
-                model,
-                optimizers,
-                epoch=epoch,
-                scores=[],
-                best_ciders=[0, 0],
-                config=config,
-                filename=f'checkpoint_{phase}.pth',
-                scheduler=scheduler,
-            )
-            if epoch >= 15:
-                save_checkpoint(
-                    model,
-                    optimizers,
-                    epoch=epoch,
-                    scores=[],
-                    best_ciders=[0, 0],
-                    config=config,
-                    filename=f'checkpoint_{epoch}.pth',
-                    scheduler=scheduler,
+            with open("scores.csv", "a") as f:
+                f.write(
+                    f"{epoch}, {train_loss}, {val_loss}, {scores['BLEU'][0]}, {scores['BLEU'][-1]}, {scores['METEOR']}, {scores['ROUGE']}, {scores['CIDEr']}\n"
                 )
-
         torch.distributed.barrier()
 
 
-@hydra.main(config_path="configs/caption", config_name="coco_config")
+@hydra.main(config_path="configs/caption", config_name="custom_config")
 def run_main(config: DictConfig) -> None:
     mp.spawn(main, nprocs=config.exp.ngpus_per_node, args=(config,))
 
 
 if __name__ == "__main__":
-    # os.environ["DATA_ROOT"] = "/home/quang/datasets/coco_caption"
     os.environ["MASTER_ADDR"] = "localhost"
     os.environ["MASTER_PORT"] = "6688"
     run_main()

@@ -1,9 +1,9 @@
 exp:
   seed: 42
-  name: eval
+  name: vicap
   rank: 0
-  ngpus_per_node: 1
-  world_size: 1
+  ngpus_per_node: 2
+  world_size: 2
   checkpoint: '/home/quang/Downloads/grit_checkpoint_4ds.pth'
   eval: False
   resume: False
