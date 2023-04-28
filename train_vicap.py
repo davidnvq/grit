@@ -46,6 +46,7 @@ def evaluate_metrics(
 ):
 
     model.eval()
+    results = {}
     pred_captions = {}
     gt_captions = {}
     vocab = dataloader.dataset.vocab
@@ -84,6 +85,10 @@ def evaluate_metrics(
         for i, (gts_i, pred_i) in enumerate(zip(batch['captions'], batch_predictions)):
             pred_captions[f'{it}_{i}'] = [pred_i]
             gt_captions[f'{it}_{i}'] = gts_i
+            results[str(batch['image_ids'][i])] = pred_i
+
+    with open("predictions_epoch_{i}.json", "w") as f:
+        json.dump(results, f, indent=4, sort_keys=True)
 
     scores = metrics.compute_scores(gt_captions, pred_captions)[0]
     print(f'Epoch {epoch}: {split} scores: ' + str(scores) + '\n')
@@ -176,7 +181,7 @@ def main(gpu, config):
     # build dataloaders
     print("Building dataloaders...")
     from vicap_dataset import get_dataloaders
-    samplers, dataloaders = get_dataloaders(device=device)
+    samplers, dataloaders = get_dataloaders(device=device, batch_size=config.optimizer.batch_size)
 
     # build models
     print("Building models...")

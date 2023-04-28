@@ -205,7 +205,7 @@ def get_datasets():
     }
 
 
-def get_dataloaders(device="cuda"):
+def get_dataloaders(device="cuda", batch_size=8):
     datasets = get_datasets()
 
     collators = {
@@ -222,7 +222,7 @@ def get_dataloaders(device="cuda"):
         'valid_dict': DistributedSampler(datasets['valid_dict'], shuffle=False)
     }
 
-    dataloaders = {k: DataLoader(datasets[k], batch_size=8, num_workers=4, collate_fn=collators[k], sampler=samplers[k]) for k in datasets}
+    dataloaders = {k: DataLoader(datasets[k], batch_size=batch_size, num_workers=4, collate_fn=collators[k], sampler=samplers[k]) for k in datasets}
     return samplers, dataloaders
 
 
