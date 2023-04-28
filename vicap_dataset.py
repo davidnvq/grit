@@ -167,6 +167,8 @@ class CapsCollate:
 
 
 if __name__ == "__main__":
+
+    # get all captions to build vocabulary
     train_data = json.load(open(train_caption_path))
     test_data = json.load(open(test_caption_path))
 
@@ -174,17 +176,27 @@ if __name__ == "__main__":
     test_captions = [ann['segment_caption'] for ann in test_data['annotations']]
     all_captions = train_captions + test_captions
 
-    # save to json file
     with open(vi_caption_path, 'w', encoding='utf-8') as f:
         json.dump(all_captions, f, indent=4, ensure_ascii=False)
 
-    # dataset
-    transforms = T.Compose([T.Resize((224, 224)), T.ToTensor()])
-    train_dataset = CustomDataset(root_dir=train_image_path, captions_file=train_caption_path, vicap_file=vi_caption_path, transform=transforms)
-    test_dataset = CustomDataset(root_dir=test_image_path, captions_file=test_caption_path, vicap_file=vi_caption_path, transform=transforms)
+    # build datasets
+    transforms = get_transform(resize_name="maxwh", size=[384, 640], randaug=False)
 
+    train_dataset = CustomDataset(root_dir=train_image_path,
+                                  captions_file=train_caption_path,
+                                  vicap_file=vi_caption_path,
+                                  transform=transforms['train'])
+    test_dataset = EvalDataset(root_dir=test_image_path, captions_file=test_caption_path, vicap_file=vi_caption_path, transform=transforms['valid'])
+
+    # train_dataset
     img, target, caption = train_dataset[0]
     print(img.shape)
     print(target.shape)
     print(" ".join([train_dataset.vocab.itos[token] for token in target.numpy()]))
     print(caption)
+
+    # test_dataset
+    img, captions, img_id = test_dataset[0]
+    print(img.shape)
+    print(captions)
+    print(img_id)
