@@ -44,6 +44,7 @@ def evaluate_metrics(
     which='ft_xe',
     scheduler=None,
 ):
+
     model.eval()
     pred_captions = {}
     gt_captions = {}
@@ -189,8 +190,10 @@ def main(gpu, config):
         print(f"det missing:{len(missing)} det unexpected:{len(unexpected)}")
 
     model.cached_features = False
-
     model = model.to(device)
+    if config.optimizer.freeze_detector:
+        for param in model.detector.parameters():
+            param.requires_grad = False
 
     model = DDP(model, device_ids=[gpu], find_unused_parameters=True, broadcast_buffers=False)
     optimizers = build_optimizers(model, config, mode='xe')
