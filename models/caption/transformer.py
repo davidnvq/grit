@@ -67,7 +67,7 @@ class Transformer(BaseCaptioner):
                 vis_inputs = images
 
             if self.config.model.use_gri_feat:
-                gri_feat, _ = self.grid_net(vis_inputs['gri_feat'], attention_mask=vis_inputs['gri_mask'])
+                gri_feat, _ = self.grid_net(vis_inputs['gri_feat'], vis_inputs['gri_mask'])
                 vis_inputs['gri_feat'] = gri_feat[:, -1]
 
             dec_output = self.cap_generator(seq, vis_inputs)
