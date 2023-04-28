@@ -87,8 +87,8 @@ def evaluate_metrics(
             gt_captions[f'{it}_{i}'] = gts_i
             results[str(batch['image_ids'][i])] = pred_i
 
-    with open("predictions_epoch_{i}.json", "w") as f:
-        json.dump(results, f, indent=4, sort_keys=True)
+    with open(f"predictions_epoch_{epoch}.json", "w", encoding="utf-8") as f:
+        json.dump(results, f, indent=4, sort_keys=True, ensure_ascii=False)
 
     scores = metrics.compute_scores(gt_captions, pred_captions)[0]
     print(f'Epoch {epoch}: {split} scores: ' + str(scores) + '\n')
