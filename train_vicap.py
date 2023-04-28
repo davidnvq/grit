@@ -230,9 +230,9 @@ def main(gpu, config):
                 best_cider = scores['CIDEr']
                 torch.save({"state_dict": model.module.state_dict()}, f"model_best.pth")
 
-            with open("scores.csv", "a") as f:
+            with open("result.csv", "a") as f:
                 f.write(
-                    f"{epoch}, {train_loss}, {val_loss}, {scores['BLEU'][0]}, {scores['BLEU'][-1]}, {scores['METEOR']}, {scores['ROUGE']}, {scores['CIDEr']}\n"
+                    f"{epoch}, {train_loss:0.4f}, {val_loss:0.4f}, {scores['BLEU'][0]:0.4f}, {scores['BLEU'][-1]:0.4f}, {scores['METEOR']:0.4f}, {scores['ROUGE']:0.4f}, {scores['CIDEr']:0.4f}\n"
                 )
         torch.distributed.barrier()
 
