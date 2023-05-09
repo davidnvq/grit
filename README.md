@@ -143,6 +143,16 @@ cd notebooks
 jupyter lab
 ```
 
+### Finetune / Retrain GRIT on your own Dataset
+We provide an example of how we finetune GRIT on the custom dataset (here is Vietnamese Image Captioning). 
+Interestingly, the result shows that the GRIT checkpoint on COCO (English) benefits another language captioning task.
+You may need to modify a few files only. For exapmle, we prepare 3 files in the [vicap branch](https://github.com/davidnvq/grit/tree/vicap):
+* https://github.com/davidnvq/grit/blob/vicap/train_vicap.py
+* https://github.com/davidnvq/grit/blob/vicap/vicap_dataset.py
+* https://github.com/davidnvq/grit/blob/vicap/configs/caption/vicap_config.yaml
+
+
+
 
 ## Citation
 If you find this code useful, please kindly cite the paper with the following bibtex:
